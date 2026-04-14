@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="theme-color" content="#060608"/>
@@ -1901,6 +1902,15 @@ setTimeout(() => {
     });
   }
 }, 300);
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SENSHI Service Worker Registered'))
+        .catch(err => console.log('SW Registration Failed', err));
+    });
+  }
 </script>
 </body>
 </html>
