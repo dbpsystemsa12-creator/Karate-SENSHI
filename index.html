@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#060608"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>SENSHI — Lifetime Fight Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── TOKENS ─────────────────────────────────────── */
+:root {
+  --ink:   #060608;
+  --ink2:  #0d0d12;
+  --ink3:  #131318;
+  --ink4:  #1c1c24;
+  --ink5:  #26262f;
+  --line:  #2e2e3a;
+  --line2: #3e3e4e;
+  --dim:   #6a6a82;
+  --muted: #9696b2;
+  --body:  #d8d8f0;
+  --bright:#f4f4ff;
+  --r:     #e8383a;   /* red accent */
+  --r2:    #ff6140;   /* red-orange */
+  --gold:  #f5c842;
+  --teal:  #2dd4bf;
+  --blue:  #60a5fa;
+  --violet:#a78bfa;
+  --white: #ffffff;
+  --glow-r: 0 0 30px rgba(232,56,58,.45);
+  --glow-g: 0 0 20px rgba(45,212,191,.35);
+  --glow-gold: 0 0 24px rgba(245,200,66,.4);
+  --radius: 14px;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-ui:      'Syne', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+}
+
+/* ── RESET ──────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;font-size:16px;}
+body{
+  font-family:var(--font-ui);
+  background:var(--ink);
+  color:var(--body);
+  min-height:100vh;
+  overflow-x:hidden;
+  overscroll-behavior:none;
+}
+
+/* ── NOISE TEXTURE OVERLAY ───────────────────────── */
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.025;pointer-events:none;z-index:9998;
+}
+
+/* ── SCAN LINE ──────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+  pointer-events:none;z-index:9997;
+}
+
+/* ── APP SHELL ──────────────────────────────────── */
+#app{max-width:430px;margin:0 auto;padding-bottom:74px;position:relative;z-index:1;}
+
+/* ── TOP BAR ────────────────────────────────────── */
+#topbar{
+  position:sticky;top:0;z-index:900;
+  background:rgba(6,6,8,.88);
+  backdrop-filter:blur(24px) saturate(1.4);
+  border-bottom:1px solid var(--line);
+  padding:10px 18px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.tb-logo{font-family:var(--font-display);font-size:26px;letter-spacing:5px;color:var(--r);text-shadow:var(--glow-r);}
+.tb-right{display:flex;align-items:center;gap:10px;}
+.tb-belt{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;
+  padding:4px 10px;border-radius:6px;font-weight:500;
+  border:1px solid;
+}
+.tb-day{font-family:var(--font-mono);font-size:11px;color:var(--dim);}
+
+/* ── BOTTOM NAV ─────────────────────────────────── */
+#nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:rgba(8,8,12,.94);
+  backdrop-filter:blur(28px);
+  border-top:1px solid var(--line);
+  display:flex;z-index:950;
+  padding-bottom:env(safe-area-inset-bottom,0);
+}
+.nb{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:9px 4px 8px;background:none;border:none;cursor:pointer;
+  color:var(--dim);font-family:var(--font-ui);font-size:9px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;transition:color .2s;
+}
+.nb.on{color:var(--r);}
+.nb-ic{font-size:18px;line-height:1;}
+
+/* ── PAGES ──────────────────────────────────────── */
+.pg{display:none;padding:14px 14px 0;animation:rise .28s ease;}
+.pg.on{display:block;}
+@keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+/* ── SECTION TITLE ──────────────────────────────── */
+.stitle{
+  font-family:var(--font-display);font-size:22px;letter-spacing:3px;
+  color:var(--bright);margin-bottom:14px;margin-top:6px;
+  display:flex;align-items:baseline;gap:10px;
+}
+.stitle-sub{font-family:var(--font-mono);font-size:10px;color:var(--dim);letter-spacing:1px;font-weight:400;}
+
+/* ── CARD ───────────────────────────────────────── */
+.card{
+  background:var(--ink3);border:1px solid var(--line);
+  border-radius:var(--radius);padding:16px;margin-bottom:10px;
+  position:relative;overflow:hidden;
+}
+.card-accent-top::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--r),var(--r2));
+}
+.card-accent-teal::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--teal),var(--blue));
+}
+.card-accent-gold::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--r2));
+}
+.card-title{
+  font-family:var(--font-display);font-size:16px;letter-spacing:2px;
+  color:var(--bright);margin-bottom:12px;
+}
+
+/* ── HERO STAT GRID ─────────────────────────────── */
+.hero-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
+.hstat{
+  background:var(--ink3);border:1px solid var(--line);border-radius:12px;
+  padding:12px 10px;text-align:center;
+}
+.hstat-val{font-family:var(--font-display);font-size:30px;line-height:1;}
+.hstat-lbl{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px;font-weight:700;}
+
+/* ── STREAK HERO ────────────────────────────────── */
+.streak-hero{
+  background:linear-gradient(135deg,rgba(232,56,58,.1),rgba(255,97,64,.05));
+  border:1px solid rgba(232,56,58,.25);
+  border-radius:var(--radius);padding:18px;margin-bottom:10px;
+  display:flex;align-items:center;gap:16px;
+}
+.streak-fire{font-size:48px;line-height:1;filter:drop-shadow(0 0 12px rgba(232,56,58,.6));}
+.streak-info{}
+.streak-num{font-family:var(--font-display);font-size:56px;color:var(--r);line-height:1;text-shadow:var(--glow-r);}
+.streak-label{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
+.streak-best{font-family:var(--font-mono);font-size:11px;color:var(--dim);margin-top:4px;}
+
+/* ── BELT DISPLAY ───────────────────────────────── */
+.belt-card{
+  border-radius:var(--radius);padding:18px;margin-bottom:10px;
+  position:relative;overflow:hidden;
+}
+.belt-bg{position:absolute;inset:0;opacity:.07;}
+.belt-content{position:relative;z-index:1;}
+.belt-title{font-family:var(--font-display);font-size:28px;letter-spacing:4px;}
+.belt-rank{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;margin-bottom:4px;opacity:.7;}
+.belt-xp-bar{height:6px;background:rgba(255,255,255,.1);border-radius:3px;margin:10px 0 6px;overflow:hidden;}
+.belt-xp-fill{height:100%;border-radius:3px;transition:width .7s ease;}
+.belt-xp-row{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;opacity:.6;}
+
+/* ── WEEK CALENDAR ──────────────────────────────── */
+.week-row{display:flex;gap:6px;margin-bottom:10px;}
+.wday{
+  flex:1;border-radius:10px;padding:8px 4px;text-align:center;
+  background:var(--ink3);border:1px solid var(--line);
+}
+.wday.done{background:rgba(45,212,191,.08);border-color:rgba(45,212,191,.3);}
+.wday.today{background:rgba(232,56,58,.1);border-color:rgba(232,56,58,.4);}
+.wday.rest{background:var(--ink2);border-style:dashed;opacity:.5;}
+.wday-name{font-size:9px;color:var(--dim);letter-spacing:1px;font-weight:700;text-transform:uppercase;}
+.wday-num{font-family:var(--font-display);font-size:20px;line-height:1;margin:2px 0;}
+.wday-ic{font-size:12px;}
+
+/* ── TODAY PLAN ─────────────────────────────────── */
+.today-sections{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.ts-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--ink4);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;cursor:pointer;
+  transition:border-color .2s,background .2s;
+}
+.ts-row.done{border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.04);}
+.ts-row:active{transform:scale(.98);}
+.ts-ic{font-size:20px;min-width:28px;text-align:center;}
+.ts-body{flex:1;}
+.ts-name{font-weight:700;font-size:14px;letter-spacing:.3px;}
+.ts-meta{font-size:11px;color:var(--dim);margin-top:2px;font-family:var(--font-mono);}
+.ts-check{
+  width:22px;height:22px;border-radius:6px;
+  border:2px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--teal);
+  transition:all .2s;
+}
+.ts-row.done .ts-check{background:rgba(45,212,191,.15);border-color:var(--teal);}
+
+/* ── EXERCISE LIST ──────────────────────────────── */
+.ex-list{display:flex;flex-direction:column;gap:7px;margin-top:8px;}
+.ex-item{
+  background:var(--ink4);border:1px solid var(--line);border-radius:10px;
+  padding:12px 13px;display:flex;align-items:flex-start;gap:11px;
+  cursor:pointer;transition:border-color .2s,transform .12s;
+}
+.ex-item.done{border-color:rgba(45,212,191,.3);background:rgba(45,212,191,.03);}
+.ex-item:active{transform:scale(.985);}
+.ex-cb{
+  width:22px;height:22px;min-width:22px;border-radius:6px;
+  border:2px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--teal);margin-top:1px;
+  transition:all .2s;
+}
+.ex-item.done .ex-cb{background:rgba(45,212,191,.15);border-color:var(--teal);}
+.ex-body{flex:1;}
+.ex-name{font-weight:700;font-size:14px;letter-spacing:.3px;}
+.ex-desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45;}
+.ex-foot{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.tag{
+  font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:5px;
+  border:1px solid;
+}
+.tag-time{color:var(--r);border-color:rgba(232,56,58,.3);background:rgba(232,56,58,.05);}
+.tag-rep{color:var(--blue);border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.05);}
+.tag-tip{color:var(--gold);border-color:rgba(245,200,66,.3);background:rgba(245,200,66,.05);}
+.tmr-btn{
+  font-family:var(--font-mono);font-size:11px;font-weight:500;
+  padding:4px 11px;border-radius:6px;cursor:pointer;
+  background:none;border:1px solid var(--r);color:var(--r);
+  transition:background .15s;
+}
+.tmr-btn.active{background:rgba(232,56,58,.12);color:var(--r2);}
+.tmr-btn:active{transform:scale(.95);}
+
+/* ── SECTION PROGRESS ───────────────────────────── */
+.spbar{height:3px;background:var(--ink5);border-radius:2px;margin:6px 0 10px;overflow:hidden;}
+.spbar-fill{height:100%;background:linear-gradient(90deg,var(--r),var(--r2));border-radius:2px;transition:width .4s;}
+
+/* ── RATING DOTS ─────────────────────────────────── */
+.rtg-grid{display:grid;gap:14px;}
+.rtg-row{}
+.rtg-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.rtg-name{font-size:13px;font-weight:700;color:var(--body);}
+.rtg-val{font-family:var(--font-display);font-size:22px;color:var(--r);}
+.rtg-dots{display:flex;gap:5px;}
+.rdot{
+  flex:1;height:32px;border-radius:6px;
+  background:var(--ink5);border:1px solid var(--line);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:10px;color:var(--dim);
+  transition:all .12s;
+}
+.rdot.on{border-color:var(--r);color:var(--bright);}
+
+/* ── CHART AREA ─────────────────────────────────── */
+.chart-wrap{position:relative;height:190px;}
+.chart-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.ctab{
+  font-family:var(--font-mono);font-size:11px;padding:5px 12px;border-radius:7px;
+  background:var(--ink5);border:1px solid var(--line);color:var(--dim);
+  cursor:pointer;transition:all .15s;
+}
+.ctab.on{background:rgba(232,56,58,.12);border-color:rgba(232,56,58,.4);color:var(--r);}
+
+/* ── BELT PROGRESSION ───────────────────────────── */
+.belt-list{display:flex;flex-direction:column;gap:8px;}
+.bl-item{
+  display:flex;align-items:center;gap:14px;
+  background:var(--ink3);border:1px solid var(--line);
+  border-radius:11px;padding:13px;
+  transition:border-color .2s;
+}
+.bl-item.current{border-color:var(--gold);background:rgba(245,200,66,.04);}
+.bl-item.earned{border-color:rgba(45,212,191,.3);}
+.bl-item.locked{opacity:.45;}
+.bl-dot{width:18px;height:18px;border-radius:50%;min-width:18px;}
+.bl-info{flex:1;}
+.bl-name{font-weight:700;font-size:14px;}
+.bl-sub{font-size:11px;color:var(--dim);font-family:var(--font-mono);margin-top:2px;}
+.bl-badge{
+  font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:5px;
+}
+.bb-current{background:rgba(245,200,66,.15);color:var(--gold);border:1px solid rgba(245,200,66,.3);}
+.bb-earned{background:rgba(45,212,191,.1);color:var(--teal);border:1px solid rgba(45,212,191,.25);}
+.bb-locked{background:var(--ink5);color:var(--dim);border:1px solid var(--line);}
+
+/* ── ACHIEVEMENTS ───────────────────────────────── */
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ach-item{
+  background:var(--ink3);border:1px solid var(--line);border-radius:11px;
+  padding:12px;text-align:center;
+}
+.ach-item.earned{border-color:rgba(245,200,66,.35);background:rgba(245,200,66,.04);}
+.ach-item.locked{opacity:.4;filter:grayscale(.8);}
+.ach-ic{font-size:28px;margin-bottom:6px;}
+.ach-name{font-size:12px;font-weight:700;letter-spacing:.3px;}
+.ach-desc{font-size:10px;color:var(--dim);margin-top:3px;font-family:var(--font-mono);}
+.ach-earned-tag{font-family:var(--font-mono);font-size:9px;color:var(--gold);margin-top:5px;}
+
+/* ── STRATEGY ───────────────────────────────────── */
+.tip-card{
+  background:var(--ink3);border:1px solid var(--line);
+  border-radius:var(--radius);padding:16px;margin-bottom:8px;
+  position:relative;overflow:hidden;
+}
+.tip-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--r),var(--r2));
+}
+.tip-cat{font-size:10px;color:var(--r);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:5px;font-family:var(--font-mono);}
+.tip-text{font-size:14px;line-height:1.6;color:var(--body);}
+.tip-detail{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.5;}
+
+/* ── COMBO BUILDER ──────────────────────────────── */
+.combo-display{
+  background:var(--ink2);border:1px solid var(--line);border-radius:10px;
+  padding:13px;min-height:58px;display:flex;flex-wrap:wrap;
+  gap:6px;align-items:center;margin-bottom:12px;
+}
+.combo-chip{
+  background:var(--r);color:#fff;
+  font-size:11px;font-weight:700;letter-spacing:.4px;
+  padding:4px 10px;border-radius:20px;
+  display:flex;align-items:center;gap:5px;
+}
+.chip-x{cursor:pointer;opacity:.75;font-size:13px;line-height:1;}
+.move-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px;}
+.mpbtn{
+  background:var(--ink4);border:1px solid var(--line);color:var(--body);
+  font-family:var(--font-ui);font-size:12px;font-weight:700;
+  padding:10px 6px;border-radius:9px;cursor:pointer;text-align:center;
+  transition:all .12s;letter-spacing:.3px;
+}
+.mpbtn:active{background:rgba(232,56,58,.1);border-color:var(--r);transform:scale(.95);}
+
+/* ── FOCUS MODE ─────────────────────────────────── */
+#focus{
+  display:none;position:fixed;inset:0;z-index:9000;
+  background:var(--ink);
+  flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:28px 24px;
+}
+#focus.on{display:flex;animation:rise .25s ease;}
+.focus-section{font-family:var(--font-mono);font-size:11px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.focus-name{font-family:var(--font-display);font-size:34px;letter-spacing:3px;color:var(--bright);margin-bottom:10px;line-height:1.1;}
+.focus-desc{font-size:14px;color:var(--muted);margin-bottom:38px;line-height:1.5;max-width:320px;}
+.focus-clock{font-family:var(--font-display);font-size:100px;line-height:1;color:var(--r);text-shadow:var(--glow-r);margin-bottom:10px;transition:color .3s;}
+.focus-clock.warn{color:var(--gold);text-shadow:var(--glow-gold);}
+.focus-prompt{
+  font-size:15px;color:var(--gold);font-style:italic;
+  margin-bottom:36px;min-height:24px;
+  transition:opacity .4s;letter-spacing:.2px;
+}
+.focus-btns{display:flex;gap:12px;}
+.btn{
+  font-family:var(--font-ui);font-size:14px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  padding:13px 28px;border-radius:10px;cursor:pointer;
+  border:none;transition:all .18s;
+}
+.btn-red{background:var(--r);color:#fff;}
+.btn-red:hover{background:var(--r2);}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--body);color:var(--bright);}
+.btn-teal{background:var(--teal);color:#000;}
+.focus-progress{
+  position:absolute;bottom:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--r),var(--r2));
+  transition:width .9s linear;
+}
+
+/* ── AI COACH ───────────────────────────────────── */
+.coach-bubble{
+  background:linear-gradient(135deg,rgba(232,56,58,.07),rgba(167,139,250,.05));
+  border:1px solid rgba(167,139,250,.2);border-radius:var(--radius);
+  padding:16px;margin-bottom:10px;position:relative;
+}
+.coach-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.coach-av{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--r),var(--violet));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.coach-name{font-weight:800;font-size:13px;color:var(--bright);}
+.coach-tag{font-size:10px;color:var(--violet);font-family:var(--font-mono);}
+.coach-text{font-size:13px;line-height:1.65;color:var(--body);}
+.coach-loading{display:flex;gap:5px;align-items:center;padding:4px 0;}
+.dot-pulse{width:7px;height:7px;border-radius:50%;background:var(--violet);animation:pulse 1.2s ease-in-out infinite;}
+.dot-pulse:nth-child(2){animation-delay:.2s;}
+.dot-pulse:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{0%,100%{opacity:.25;transform:scale(.8);}50%{opacity:1;transform:scale(1);}}
+.coach-input-row{display:flex;gap:8px;margin-top:10px;}
+.coach-input{
+  flex:1;background:var(--ink4);border:1px solid var(--line2);
+  color:var(--body);font-family:var(--font-ui);font-size:13px;
+  padding:10px 13px;border-radius:9px;outline:none;
+  transition:border-color .2s;
+}
+.coach-input:focus{border-color:rgba(167,139,250,.5);}
+.coach-send{
+  background:var(--violet);color:#000;border:none;
+  font-weight:700;padding:10px 16px;border-radius:9px;cursor:pointer;
+  font-size:14px;transition:opacity .2s;
+}
+.coach-send:disabled{opacity:.35;cursor:default;}
+
+/* ── LOG HISTORY ─────────────────────────────────── */
+.log-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--line);
+}
+.log-row:last-child{border-bottom:none;}
+.log-date{font-family:var(--font-mono);font-size:11px;color:var(--dim);}
+.log-vals{display:flex;gap:8px;}
+.log-val{font-family:var(--font-mono);font-size:11px;}
+
+/* ── PERSONAL BESTS ─────────────────────────────── */
+.pb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.pb-item{
+  background:var(--ink4);border:1px solid var(--line);border-radius:10px;
+  padding:12px;
+}
+.pb-val{font-family:var(--font-display);font-size:28px;color:var(--gold);line-height:1;}
+.pb-name{font-size:11px;color:var(--dim);margin-top:3px;font-family:var(--font-mono);}
+.pb-date{font-size:9px;color:var(--ink5);margin-top:4px;font-family:var(--font-mono);}
+
+/* ── MISC UTILS ─────────────────────────────────── */
+.divider{height:1px;background:var(--line);margin:14px 0;}
+.empty{text-align:center;color:var(--dim);font-size:13px;padding:20px;font-family:var(--font-mono);}
+.row-sb{display:flex;justify-content:space-between;align-items:center;}
+.mono{font-family:var(--font-mono);}
+
+/* ── TOAST ──────────────────────────────────────── */
+#toast{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-100px);
+  background:var(--ink3);border:1px solid var(--line2);
+  color:var(--bright);padding:11px 22px;border-radius:10px;
+  font-size:13px;font-weight:700;z-index:10000;
+  transition:transform .3s ease;white-space:nowrap;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── TOGGLE ─────────────────────────────────────── */
+.tog{
+  width:42px;height:23px;background:var(--ink5);border:1px solid var(--line2);
+  border-radius:12px;cursor:pointer;position:relative;transition:background .2s;
+  flex-shrink:0;
+}
+.tog.on{background:var(--r);border-color:var(--r);}
+.tog::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:17px;height:17px;border-radius:50%;background:#fff;
+  transition:transform .2s;
+}
+.tog.on::after{transform:translateX(19px);}
+
+/* ── CYCLE BANNER ─────────────────────────────── */
+.cycle-banner{
+  background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(255,97,64,.05));
+  border:1px solid rgba(245,200,66,.25);border-radius:var(--radius);
+  padding:16px;margin-bottom:10px;
+  display:flex;align-items:center;gap:14px;
+}
+.cycle-num{font-family:var(--font-display);font-size:48px;color:var(--gold);line-height:1;text-shadow:var(--glow-gold);}
+.cycle-info{}
+.cycle-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;}
+.cycle-name{font-family:var(--font-display);font-size:22px;color:var(--bright);letter-spacing:2px;}
+.cycle-sub{font-family:var(--font-mono);font-size:10px;color:var(--dim);margin-top:3px;}
+
+/* ── CALENDAR GRID ───────────────────────────────── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-cell{
+  aspect-ratio:1;border-radius:6px;background:var(--ink4);
+  border:1px solid var(--line);display:flex;align-items:center;
+  justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--dim);
+}
+.cal-cell.done{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.3);color:var(--teal);}
+.cal-cell.today{background:rgba(232,56,58,.12);border-color:var(--r);color:var(--r);font-weight:700;}
+.cal-cell.rest{background:var(--ink2);border-style:dashed;opacity:.4;}
+.cal-cell.future{opacity:.2;}
+
+/* ── INPUT ───────────────────────────────────────── */
+input[type=range]{width:100%;accent-color:var(--r);cursor:pointer;}
+
+/* ── SCROLL CUSTOM ───────────────────────────────── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-logo">SENSHI</div>
+  <div class="tb-right">
+    <div class="tb-belt" id="tb-belt">⬜ WHITE BELT</div>
+    <div class="tb-day" id="tb-day">DAY 1</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+<!-- ══════════════════════════════════════
+     PAGE: DASHBOARD
+══════════════════════════════════════ -->
+<div class="pg on" id="pg-dash">
+
+  <!-- Cycle Banner -->
+  <div class="cycle-banner">
+    <div class="cycle-num" id="cycle-num">1</div>
+    <div class="cycle-info">
+      <div class="cycle-label">TRAINING CYCLE</div>
+      <div class="cycle-name" id="cycle-name">FIGHT PREP</div>
+      <div class="cycle-sub" id="cycle-sub">Day 1 of 30 • 29 days remaining</div>
+    </div>
+  </div>
+
+  <!-- Streak -->
+  <div class="streak-hero">
+    <div class="streak-fire">🔥</div>
+    <div class="streak-info">
+      <div class="streak-num" id="streak-num">0</div>
+      <div class="streak-label">Day Streak</div>
+      <div class="streak-best mono" id="streak-best">Best: 0 days</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-family:var(--font-display);font-size:36px;color:var(--teal)" id="days-done">0</div>
+      <div style="font-size:10px;color:var(--dim);letter-spacing:1px;font-weight:700">SESSIONS</div>
+      <div style="font-family:var(--font-display);font-size:24px;color:var(--muted);margin-top:2px" id="total-xp-disp">0 XP</div>
+      <div style="font-size:10px;color:var(--dim);letter-spacing:1px;font-weight:700">LIFETIME XP</div>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="hero-row">
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--r)" id="ds-kick">60°</div>
+      <div class="hstat-lbl">🦵 KICK HT</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--teal)" id="ds-ctrl">5.0</div>
+      <div class="hstat-lbl">🎯 CONTROL</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--gold)" id="ds-spd">5.0</div>
+      <div class="hstat-lbl">⚡ SPEED</div>
+    </div>
+  </div>
+  <div class="hero-row">
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--blue)" id="ds-bal">5.0</div>
+      <div class="hstat-lbl">⚖️ BALANCE</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--violet)" id="ds-flex">5.0</div>
+      <div class="hstat-lbl">🧘 FLEX</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--r2)" id="ds-fiq">5.0</div>
+      <div class="hstat-lbl">🧠 FIGHT IQ</div>
+    </div>
+  </div>
+
+  <!-- Week View -->
+  <div class="card">
+    <div class="card-title">THIS WEEK</div>
+    <div class="week-row" id="week-row"></div>
+  </div>
+
+  <!-- Today's Plan -->
+  <div class="card card-accent-top">
+    <div class="row-sb" style="margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:0" id="today-label">TODAY'S PLAN</div>
+      <button class="btn btn-red" style="font-size:12px;padding:8px 16px" onclick="goTrain()">TRAIN NOW →</button>
+    </div>
+    <div class="today-sections" id="today-sections"></div>
+  </div>
+
+  <!-- Coach Tip -->
+  <div class="coach-bubble">
+    <div class="coach-hd">
+      <div class="coach-av">🥋</div>
+      <div>
+        <div class="coach-name">SENSHI COACH</div>
+        <div class="coach-tag">AI-POWERED ANALYSIS</div>
+      </div>
+    </div>
+    <div class="coach-text" id="dash-coach-tip">Loading your personalised tip...</div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: TRAIN
+══════════════════════════════════════ -->
+<div class="pg" id="pg-train">
+  <div class="row-sb" style="margin-bottom:14px;margin-top:6px">
+    <div class="stitle" style="margin:0">TRAINING<span class="stitle-sub" style="margin-left:8px" id="train-day-lbl">DAY 1</span></div>
+    <button class="btn btn-red" style="font-size:11px;padding:8px 14px" onclick="openFocus(0)">⚡ FOCUS</button>
+  </div>
+
+  <div id="train-sections"></div>
+
+  <!-- Rate Session -->
+  <div class="card card-accent-teal" style="margin-top:14px">
+    <div class="card-title">RATE YOUR SESSION</div>
+    <div class="rtg-grid" id="rating-grid"></div>
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="saveRatings(false)">SAVE</button>
+      <button class="btn btn-red" style="flex:2" onclick="saveRatings(true)">COMPLETE DAY ✦</button>
+    </div>
+  </div>
+
+  <!-- Session notes -->
+  <div class="card" style="margin-top:8px">
+    <div class="card-title">SESSION NOTES</div>
+    <textarea id="session-notes" placeholder="How did it feel? What clicked? What needs work..." style="width:100%;background:var(--ink4);border:1px solid var(--line2);color:var(--body);font-family:var(--font-ui);font-size:13px;padding:11px;border-radius:9px;outline:none;resize:none;min-height:80px;line-height:1.5;transition:border-color .2s" onfocus="this.style.borderColor='rgba(232,56,58,.4)'" onblur="this.style.borderColor='var(--line2)'"></textarea>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: STATS
+══════════════════════════════════════ -->
+<div class="pg" id="pg-stats">
+  <div class="stitle" style="margin-top:6px">STATS<span class="stitle-sub">LIFETIME TRACKING</span></div>
+
+  <!-- Belt Progress -->
+  <div class="card card-accent-gold" id="belt-card">
+    <div class="card-title">BELT PROGRESSION</div>
+    <div class="belt-list" id="belt-list"></div>
+  </div>
+
+  <!-- Perf Chart -->
+  <div class="card">
+    <div class="card-title">PERFORMANCE OVER TIME</div>
+    <div class="chart-tabs" id="chart-tabs"></div>
+    <div class="chart-wrap"><canvas id="perf-chart"></canvas></div>
+  </div>
+
+  <!-- PBs -->
+  <div class="card">
+    <div class="card-title">🏆 PERSONAL BESTS</div>
+    <div class="pb-grid" id="pb-grid"></div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="card">
+    <div class="card-title">TRAINING CALENDAR</div>
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--dim);display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;text-align:center">
+      <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- Log History -->
+  <div class="card">
+    <div class="card-title">SESSION LOG</div>
+    <div id="log-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: PROGRESS
+══════════════════════════════════════ -->
+<div class="pg" id="pg-progress">
+  <div class="stitle" style="margin-top:6px">PROGRESS<span class="stitle-sub">SKILLS & AWARDS</span></div>
+
+  <!-- XP / Belt hero -->
+  <div class="card card-accent-gold" id="xp-belt-card">
+    <!-- dynamically filled -->
+  </div>
+
+  <!-- Achievements -->
+  <div class="card">
+    <div class="card-title">ACHIEVEMENTS</div>
+    <div class="ach-grid" id="ach-grid"></div>
+  </div>
+
+  <!-- Skills Unlocked -->
+  <div class="card">
+    <div class="card-title">SKILL TREE</div>
+    <div id="skill-tree"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: COMBO / CUSTOM
+══════════════════════════════════════ -->
+<div class="pg" id="pg-combo">
+  <div class="stitle" style="margin-top:6px">COMBO LAB</div>
+
+  <div class="card card-accent-top">
+    <div class="card-title">BUILD YOUR COMBO</div>
+    <div class="combo-display" id="combo-display">
+      <span style="color:var(--dim);font-size:12px;font-family:var(--font-mono)">Tap moves below to build...</span>
+    </div>
+    <div class="move-pad" id="move-pad"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="clearCombo()">CLEAR</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="saveCombo()">SAVE</button>
+      <button class="btn btn-red" style="flex:2" onclick="practiceCombo()">▶ DRILL IT</button>
+    </div>
+  </div>
+
+  <!-- Saved Combos -->
+  <div class="card">
+    <div class="card-title">SAVED COMBOS</div>
+    <div id="saved-combos-list"></div>
+    <div class="empty" id="combos-empty" style="display:none">No saved combos yet.</div>
+  </div>
+
+  <!-- Custom Workout -->
+  <div class="card card-accent-teal">
+    <div class="card-title">CUSTOM WORKOUT</div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--dim);letter-spacing:.5px;margin-bottom:8px">DURATION</div>
+      <input type="range" min="5" max="90" value="20" step="5" id="cw-dur" oninput="cwUpdate()"/>
+      <div class="row-sb" style="margin-top:5px">
+        <span class="mono" style="font-size:11px;color:var(--dim)">5 min</span>
+        <span class="mono" style="font-size:13px;color:var(--r)" id="cw-dur-lbl">20 min</span>
+        <span class="mono" style="font-size:11px;color:var(--dim)">90 min</span>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--dim);letter-spacing:.5px;margin-bottom:8px">FOCUS AREA</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px" id="cw-focus-grid"></div>
+    <button class="btn btn-teal" style="width:100%" onclick="startCustom()">START SESSION</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: STRATEGY
+══════════════════════════════════════ -->
+<div class="pg" id="pg-strategy">
+  <div class="stitle" style="margin-top:6px">FIGHT IQ<span class="stitle-sub">STRATEGY & COACH</span></div>
+
+  <!-- AI Coach -->
+  <div class="card card-accent-top">
+    <div class="coach-hd">
+      <div class="coach-av">🥋</div>
+      <div>
+        <div class="coach-name">ASK YOUR COACH</div>
+        <div class="coach-tag">POWERED BY CLAUDE</div>
+      </div>
+    </div>
+    <div id="coach-messages" style="max-height:280px;overflow-y:auto;margin-bottom:10px;display:flex;flex-direction:column;gap:8px"></div>
+    <div class="coach-input-row">
+      <input class="coach-input" id="coach-input" placeholder="Ask anything: technique, strategy, recovery..." onkeydown="if(event.key==='Enter')sendCoach()"/>
+      <button class="coach-send" id="coach-send" onclick="sendCoach()">↑</button>
+    </div>
+  </div>
+
+  <!-- Strategy Tips -->
+  <div id="strategy-cards"></div>
+</div>
+
+</div><!-- /app -->
+
+<!-- BOTTOM NAV -->
+<div id="nav">
+  <button class="nb on" onclick="switchPg('dash')"  id="nb-dash"><span class="nb-ic">🏠</span>HOME</button>
+  <button class="nb"    onclick="switchPg('train')" id="nb-train"><span class="nb-ic">🥊</span>TRAIN</button>
+  <button class="nb"    onclick="switchPg('stats')" id="nb-stats"><span class="nb-ic">📊</span>STATS</button>
+  <button class="nb"    onclick="switchPg('progress')" id="nb-progress"><span class="nb-ic">🏅</span>RANK</button>
+  <button class="nb"    onclick="switchPg('combo')"  id="nb-combo"><span class="nb-ic">⚡</span>COMBO</button>
+  <button class="nb"    onclick="switchPg('strategy')" id="nb-strategy"><span class="nb-ic">🧠</span>IQ</button>
+</div>
+
+<!-- FOCUS OVERLAY -->
+<div id="focus">
+  <div class="focus-section" id="f-section">WARM-UP</div>
+  <div class="focus-name" id="f-name">EXERCISE</div>
+  <div class="focus-desc" id="f-desc">Instructions here</div>
+  <div class="focus-clock" id="f-clock">1:00</div>
+  <div class="focus-prompt" id="f-prompt">"Stay relaxed."</div>
+  <div class="focus-btns">
+    <button class="btn btn-ghost" onclick="closeFocus()">✕ EXIT</button>
+    <button class="btn btn-red" id="f-btn" onclick="toggleFocusTmr()">▶ START</button>
+  </div>
+  <div class="focus-progress" id="f-prog" style="width:0%"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// ██ DATA DEFINITIONS
+// ═══════════════════════════════════════════════════════════
+
+const BELTS = [
+  { name:'WHITE BELT',  color:'#e8e8e8', bg:'#444',  xp:0,    sessions:0,  icon:'⬜' },
+  { name:'YELLOW BELT', color:'#f5c842', bg:'#7a6300',xp:300,  sessions:5,  icon:'🟡' },
+  { name:'ORANGE BELT', color:'#ff9520', bg:'#7a3d00',xp:700,  sessions:12, icon:'🟠' },
+  { name:'GREEN BELT',  color:'#2dd4bf', bg:'#006b5a',xp:1400, sessions:22, icon:'🟢' },
+  { name:'BLUE BELT',   color:'#60a5fa', bg:'#1a4a8a',xp:2500, sessions:35, icon:'🔵' },
+  { name:'PURPLE BELT', color:'#a78bfa', bg:'#4a2a8a',xp:4000, sessions:52, icon:'🟣' },
+  { name:'BROWN BELT',  color:'#b45309', bg:'#5a2800',xp:6000, sessions:75, icon:'🟤' },
+  { name:'RED BELT',    color:'#e8383a', bg:'#6a0000',xp:9000, sessions:105,icon:'🔴' },
+  { name:'BLACK BELT',  color:'#f4f4ff', bg:'#111',   xp:13000,sessions:150,icon:'⬛' },
+];
+
+const CYCLES = [
+  { name:'FIGHT PREP',   focus:'Competition readiness, explosiveness, combinations' },
+  { name:'FLEX & FLOW',  focus:'Kick height, hip mobility, smooth technique' },
+  { name:'POWER CYCLE',  focus:'Explosive strength, fast twitch muscle, impact' },
+  { name:'FIGHT IQ',     focus:'Strategy, counters, timing, sparring drills' },
+  { name:'RECOVERY',     focus:'Active recovery, flexibility, mental training' },
+  { name:'ADVANCED',     focus:'High-level combinations, spinning kicks, feints' },
+];
+
+const SECTIONS = [
+  {
+    id:'warmup', icon:'🔥', name:'WARM-UP & DYNAMIC STRETCH', est:'10 min',
+    exs:[
+      {id:'w1', name:'Jump Rope / Jogging', desc:'Get blood flowing, warm the joints. Light pace.', dur:180, prompt:'Breathe rhythmically. Stay light on your feet.'},
+      {id:'w2', name:'Leg Swings', desc:'Forward/back AND lateral swings, 15 per leg.', reps:'15×2', prompt:'Controlled range. Don\'t force the swing.'},
+      {id:'w3', name:'Hip Circles', desc:'Large circles both directions. Loosen hip socket.', dur:45, prompt:'Feel each rotation deep in the hip.'},
+      {id:'w4', name:'Dynamic Lunge + Twist', desc:'Walking lunge, rotate torso over front leg.', reps:'10 each', prompt:'Drive the knee up after each lunge.'},
+      {id:'w5', name:'Ankle Rotations & Calf Raise', desc:'Rotate ankles 10 each, then 15 calf raises.', reps:'15', prompt:'Ankles carry your stance — never skip this.'},
+    ]
+  },
+  {
+    id:'strength', icon:'💪', name:'EXPLOSIVE STRENGTH', est:'15 min',
+    exs:[
+      {id:'s1', name:'Plyometric Push-ups', desc:'Full explosion off the floor. Land softly, reset.', reps:'3×8', prompt:'Explode off the ground. Power from chest, not shoulders.'},
+      {id:'s2', name:'Jump Squats', desc:'Deep squat, maximum vertical explosion. Soft landing.', dur:45, prompt:'Power from the glutes. Don\'t let knees cave inward.'},
+      {id:'s3', name:'Single-Leg Pistol Hold', desc:'Slow descent on one leg, hold at bottom 2 sec.', reps:'3×5 each', prompt:'Heel on the floor. Fight the wobble — that\'s the point.'},
+      {id:'s4', name:'Burpee + Roundhouse', desc:'Full burpee, finish with a powerful roundhouse on standing.', dur:60, prompt:'The kick is a weapon — snap it back fast.'},
+      {id:'s5', name:'Hollow Body Hold', desc:'Lie flat, arms overhead, lower back pressed down. Hold.', dur:30, prompt:'Core braced like you\'re about to take a punch.'},
+    ]
+  },
+  {
+    id:'kicks', icon:'🦵', name:'KICK TECHNIQUE & CONTROL', est:'20 min',
+    exs:[
+      {id:'k1', name:'Slow-Mo Roundhouse ×10', desc:'Chamber → extend → hold 2 sec → retract SLOWLY. No rushing.', reps:'10 each', prompt:'Slower is harder. This builds real control.'},
+      {id:'k2', name:'Chamber Hold', desc:'Raise knee to chamber, hold 3 sec, extend, hold 2 sec, retract.', dur:90, prompt:'Wobbling is normal. Fight it. That\'s strength being built.'},
+      {id:'k3', name:'High Kick Accuracy', desc:'Kick a specific target point 20 times per leg. Same spot each time.', reps:'20 each', prompt:'Precision is more powerful than raw height.'},
+      {id:'k4', name:'Side Kick Wall Drill', desc:'Face wall at arm\'s distance, practice side kick with control.', reps:'15 each', prompt:'Hip up and through — don\'t lean back to compensate.'},
+      {id:'k5', name:'Kick Height Stretch Kicks', desc:'Kick as high as possible with control — no swing-and-pray.', reps:'15 each', prompt:'Hip rises first. Core engages. Don\'t lean back.'},
+      {id:'k6', name:'Spinning Back Kick', desc:'Pivot 180°, chamber, extend back kick at target height.', reps:'10 each', prompt:'Find your spot first. Eyes before the kick lands.'},
+    ]
+  },
+  {
+    id:'combos', icon:'⚔️', name:'FIGHT COMBOS & SPARRING', est:'20 min',
+    exs:[
+      {id:'f1', name:'Jab–Cross–Roundhouse', desc:'Classic 3-count. Focus on rhythm and seamless transition.', dur:120, prompt:'Don\'t telegraph the kick. Hide it behind the punches.'},
+      {id:'f2', name:'Feint + Side Kick', desc:'Fake high attack, fire side kick to mid. Commitment on the feint.', reps:'12 each', prompt:'The feint only works if they believe it.'},
+      {id:'f3', name:'Shadow Sparring Round', desc:'Full 2-min round at 80% intensity. Move, think, react.', dur:120, prompt:'Imagine a real opponent. React — don\'t just perform.'},
+      {id:'f4', name:'Reaction Counter Drill', desc:'Partner calls attack direction. Block + counter immediately.', dur:90, prompt:'Stay calm. Read the shoulder, not the fist.'},
+      {id:'f5', name:'Level Change + Hook Kick', desc:'Shoot low with a fake, come up with the hook kick.', reps:'10 each', prompt:'Level change must be REAL — sell the low shot.'},
+    ]
+  },
+  {
+    id:'speed', icon:'⚡', name:'PUNCH SPEED TRAINING', est:'12 min',
+    exs:[
+      {id:'p1', name:'Speed Burst — Jab Drill', desc:'15 rapid-fire jabs as fast as possible. Pause 5 sec. Repeat.', reps:'5 sets', prompt:'Retraction is 50% of the punch. Don\'t leave it hanging.'},
+      {id:'p2', name:'Double-End Bag / Mirror', desc:'Randomised attack patterns. Guard stays UP between shots.', dur:60, prompt:'If guard drops, STOP and reset. No sloppy reps.'},
+      {id:'p3', name:'1-2 Combo Speed Test', desc:'20 x jab-cross as fast as possible while maintaining form.', reps:'20 combos', prompt:'Stay loose in the shoulder — tension kills speed.'},
+    ]
+  },
+  {
+    id:'flex', icon:'🧘', name:'FLEXIBILITY (POST-WORKOUT)', est:'15 min',
+    exs:[
+      {id:'fl1', name:'Standing Hamstring Hold', desc:'Kick leg up, hold with hand, keep back straight, breathe.', dur:60, prompt:'Each exhale, allow an extra 1% range. Don\'t force.'},
+      {id:'fl2', name:'Butterfly Stretch', desc:'Sit, soles together, gently press knees toward floor.', dur:60, prompt:'Gravity does the work. Let go of tension.'},
+      {id:'fl3', name:'Hip Flexor Lunge Stretch', desc:'Deep lunge, drop back knee, reach arms overhead.', dur:60, prompt:'The hip flexor limits your kick height. Fix this daily.'},
+      {id:'fl4', name:'Wide Side Split Slide', desc:'Widen stance until you feel the stretch. Hold steady.', dur:90, prompt:'No bouncing. Steady, consistent pressure only.'},
+      {id:'fl5', name:'Pigeon Pose Hold', desc:'Front shin parallel to body, sink hips toward floor.', dur:60, prompt:'This is where your hip flexibility lives. Invest here.'},
+    ]
+  }
+];
+
+const ALL_EX = SECTIONS.flatMap(s => s.exs.map(e => ({...e, sectionName: s.name, sectionIcon: s.icon})));
+
+const RATINGS_DEF = [
+  {id:'ctrl',  label:'Kick Control', icon:'🎯', color:'var(--r)'},
+  {id:'bal',   label:'Balance',      icon:'⚖️', color:'var(--blue)'},
+  {id:'spd',   label:'Speed',        icon:'⚡', color:'var(--gold)'},
+  {id:'flex',  label:'Flexibility',  icon:'🧘', color:'var(--violet)'},
+  {id:'stam',  label:'Stamina',      icon:'💪', color:'var(--teal)'},
+  {id:'fiq',   label:'Fight IQ',     icon:'🧠', color:'var(--r2)'},
+];
+
+const MOVES = ['JAB','CROSS','HOOK','UPPERCUT','FRONT KICK','ROUNDHOUSE','SIDE KICK','BACK KICK','HOOK KICK','AXE KICK','SPINNING BH','QUESTION MARK','FEINT HI','FEINT LOW','SLIP','COUNTER'];
+
+const ACHIEVEMENTS = [
+  {id:'first',   icon:'🎯', name:'FIRST BLOOD',     desc:'Complete 1st session',          check: s => s.totalSessions >= 1},
+  {id:'wk1',     icon:'🗓️', name:'WEEK WARRIOR',    desc:'7 consecutive days',             check: s => s.bestStreak >= 7},
+  {id:'wk2',     icon:'⚔️', name:'IRON WILL',       desc:'14 consecutive days',            check: s => s.bestStreak >= 14},
+  {id:'month',   icon:'🏆', name:'30-DAY CHAMPION', desc:'Complete first 30-day cycle',    check: s => s.totalSessions >= 30},
+  {id:'speed10', icon:'⚡', name:'LIGHTNING',        desc:'Log Speed 10/10',                check: s => s.bestRatings.spd >= 10},
+  {id:'ctrl10',  icon:'🎯', name:'SURGEON',          desc:'Log Control 10/10',              check: s => s.bestRatings.ctrl >= 10},
+  {id:'century', icon:'💯', name:'CENTURION',        desc:'100 total sessions',             check: s => s.totalSessions >= 100},
+  {id:'xp5k',    icon:'🔥', name:'XP MACHINE',       desc:'Earn 5,000 lifetime XP',         check: s => s.totalXP >= 5000},
+  {id:'streak30',icon:'🌋', name:'VOLCANIC',         desc:'30-day streak',                  check: s => s.bestStreak >= 30},
+  {id:'flex9',   icon:'🧘', name:'CONTORTIONIST',   desc:'Log Flexibility 9+',             check: s => s.bestRatings.flex >= 9},
+  {id:'cycles3', icon:'♾️', name:'LIFER',            desc:'Complete 3 training cycles',     check: s => s.cycle >= 3},
+  {id:'blackbelt',icon:'⬛',name:'BLACK BELT',       desc:'Reach black belt rank',          check: s => getCurrentBelt(s).name === 'BLACK BELT'},
+];
+
+const STRATEGY_TIPS = [
+  {cat:'TIMING', text:'Attack the moment your opponent commits to their movement. Their preparation is your window — learn to read shoulder drops and weight shifts before the technique launches.', detail:'Practice: In shadow sparring, pick one imaginary "tell" and respond to it every time.'},
+  {cat:'DISTANCE CONTROL', text:'Own the space between you. Stay just outside their comfortable range — one step back forces them to telegraph their entry, giving you half a second of reaction time.', detail:'Drill: Use tape on the floor. Practice staying exactly on the edge of your rear-leg kick range.'},
+  {cat:'FEINTING', text:'Your feints and real attacks must be identical for the first 40% of the movement. If your feint looks like a feint, it is useless. Commit to every fake like it\'s the real shot.', detail:'Rule: Never feint twice the same way in a row. Predictable feints become non-feints.'},
+  {cat:'RELAXATION', text:'Speed is born from relaxation, not effort. A tense muscle cannot accelerate fast — it\'s already contracted. Fire only at the moment of impact, then immediately release.', detail:'Check: If you\'re tired after three techniques, you\'re using too much tension throughout.'},
+  {cat:'FOOTWORK', text:'Move on the balls of your feet. Heels touching the floor adds 150–200ms to your reaction time and removes your ability to pivot and change direction instantly.', detail:'Drill: Walk around your home for one hour on balls of feet. Build the habit unconsciously.'},
+  {cat:'FIGHT IQ', text:'Watch their eyes and lead shoulder, not their hands. Eyes telegraph intention before the body can move. The shoulder tells you which weapon comes next.', detail:'Sparring goal: For one round, only defend — no attacks. Just read and evade. Builds true IQ.'},
+  {cat:'KICK HEIGHT', text:'Your kick height is 80% hip flexibility and 20% leg strength. The limiting factor is your hip flexor and piriformis tightness — 15 minutes of targeted daily stretching will add inches in 3 weeks.', detail:'Priority stretches: Pigeon pose, hip flexor lunge, standing hamstring hold.'},
+  {cat:'COMBINATIONS', text:'Combos are about rhythm, not speed. Learn the beat — 1-and-2-and-3 — before adding power. A combo with perfect rhythm lands 3x harder than a fast sloppy one.', detail:'Practice your combos slow enough that each strike is technically perfect before adding speed.'},
+  {cat:'BREATHING', text:'Exhale sharply on every impact — it tightens your core, prevents winding, and actually adds 15–20% more power to your technique due to core engagement timing.', detail:'Never hold your breath during a combination. Short, sharp exhales. Inhale in the gaps.'},
+  {cat:'RECOVERY', text:'The fighter who recovers faster wins long matches. Your guard returns before your foot does. Your stance resets before you think about the next attack.', detail:'After every combination, ask: Am I in a good position to take a hit right now? If not, fix it.'},
+];
+
+const CUSTOM_FOCUS = ['Kicks','Flexibility','Strength','Speed','Combos','Fight IQ'];
+const PROMPTS = [
+  "Snap your kick back faster than you extend it.",
+  "Stay relaxed — tension destroys speed.",
+  "Don't use full power. Control wins.",
+  "Keep your guard up between shots.",
+  "Exhale sharp on every impact.",
+  "Chamber first. Always chamber first.",
+  "Balance on retraction — that's where you're vulnerable.",
+  "Precise and controlled beats fast and sloppy.",
+  "Think one move ahead of where you are.",
+  "Stay on the balls of your feet."
+];
+
+// ═══════════════════════════════════════════════════════════
+// ██ STATE
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_STATE = {
+  currentDay: 1,
+  cycle: 1,
+  streak: 0,
+  bestStreak: 0,
+  totalSessions: 0,
+  totalXP: 0,
+  checkedEx: {},
+  ratings: {ctrl:5, bal:5, spd:5, flex:5, stam:5, fiq:5},
+  bestRatings: {ctrl:0, bal:0, spd:0, flex:0, stam:0, fiq:0},
+  sessionLog: [],
+  completedDays: [],
+  savedCombos: [],
+  currentCombo: [],
+  earnedAchievements: [],
+  personalBests: {},
+  coachHistory: [],
+  settings: {reminders: false},
+};
+
+let S = {...DEFAULT_STATE};
+
+function loadS() {
+  try {
+    const saved = localStorage.getItem('senshi_v2');
+    if (saved) S = {...DEFAULT_STATE, ...JSON.parse(saved)};
+  } catch(e) {}
+}
+function saveS() {
+  localStorage.setItem('senshi_v2', JSON.stringify(S));
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ BELT & XP LOGIC
+// ═══════════════════════════════════════════════════════════
+function getCurrentBelt(state) {
+  const s = state || S;
+  let belt = BELTS[0];
+  for (const b of BELTS) {
+    if (s.totalXP >= b.xp && s.totalSessions >= b.sessions) belt = b;
+  }
+  return belt;
+}
+function getNextBelt() {
+  const cur = getCurrentBelt();
+  const idx = BELTS.findIndex(b => b.name === cur.name);
+  return BELTS[idx + 1] || null;
+}
+function addXP(amt) {
+  const before = getCurrentBelt();
+  S.totalXP += amt;
+  const after = getCurrentBelt();
+  saveS();
+  if (after.name !== before.name) {
+    setTimeout(() => toast(`🎉 BELT PROMOTION! ${after.icon} ${after.name}!`), 600);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ NAVIGATION
+// ═══════════════════════════════════════════════════════════
+const PAGES = ['dash','train','stats','progress','combo','strategy'];
+function switchPg(name) {
+  PAGES.forEach(p => {
+    document.getElementById('pg-' + p)?.classList.remove('on');
+    document.getElementById('nb-' + p)?.classList.remove('on');
+  });
+  document.getElementById('pg-' + name)?.classList.add('on');
+  document.getElementById('nb-' + name)?.classList.add('on');
+  if (name === 'train') renderTrain();
+  if (name === 'stats') renderStats();
+  if (name === 'progress') renderProgress();
+  if (name === 'combo') renderCombo();
+  if (name === 'strategy') renderStrategy();
+}
+function goTrain() { switchPg('train'); }
+
+// ═══════════════════════════════════════════════════════════
+// ██ DASHBOARD RENDER
+// ═══════════════════════════════════════════════════════════
+function renderDash() {
+  const belt = getCurrentBelt();
+  const dayInCycle = ((S.currentDay - 1) % 30) + 1;
+  const daysLeft = 30 - dayInCycle;
+
+  // topbar
+  document.getElementById('tb-belt').textContent = `${belt.icon} ${belt.name}`;
+  document.getElementById('tb-belt').style.borderColor = belt.color;
+  document.getElementById('tb-belt').style.color = belt.color;
+  document.getElementById('tb-day').textContent = `DAY ${S.currentDay}`;
+
+  // cycle
+  const cycleIdx = (S.cycle - 1) % CYCLES.length;
+  document.getElementById('cycle-num').textContent = S.cycle;
+  document.getElementById('cycle-name').textContent = CYCLES[cycleIdx].name;
+  document.getElementById('cycle-sub').textContent = `Day ${dayInCycle} of 30 • ${daysLeft} days remaining`;
+
+  // streak
+  document.getElementById('streak-num').textContent = S.streak;
+  document.getElementById('streak-best').textContent = `Best: ${S.bestStreak} days`;
+  document.getElementById('days-done').textContent = S.totalSessions;
+  document.getElementById('total-xp-disp').textContent = S.totalXP + ' XP';
+
+  // stat displays
+  const latestLog = S.sessionLog[S.sessionLog.length - 1];
+  const r = latestLog ? latestLog.ratings : S.ratings;
+  document.getElementById('ds-kick').textContent = S.personalBests['Kick Height'] || '60°';
+  document.getElementById('ds-ctrl').textContent = parseFloat(r.ctrl || 5).toFixed(1);
+  document.getElementById('ds-spd').textContent  = parseFloat(r.spd  || 5).toFixed(1);
+  document.getElementById('ds-bal').textContent  = parseFloat(r.bal  || 5).toFixed(1);
+  document.getElementById('ds-flex').textContent = parseFloat(r.flex || 5).toFixed(1);
+  document.getElementById('ds-fiq').textContent  = parseFloat(r.fiq  || 5).toFixed(1);
+
+  // week row
+  const weekEl = document.getElementById('week-row');
+  const days = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const today = new Date();
+  weekEl.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay() + 1 + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const done = S.sessionLog.some(l => l.date === dateStr);
+    const isToday = dateStr === today.toISOString().split('T')[0];
+    const isRest = i === 6; // Sunday rest
+    const div = document.createElement('div');
+    div.className = 'wday' + (done ? ' done' : isToday ? ' today' : isRest ? ' rest' : '');
+    div.innerHTML = `<div class="wday-name">${days[i]}</div><div class="wday-num">${d.getDate()}</div><div class="wday-ic">${done ? '✅' : isToday ? '🔥' : isRest ? '😴' : '○'}</div>`;
+    weekEl.appendChild(div);
+  }
+
+  // today sections preview
+  document.getElementById('today-label').textContent = `DAY ${dayInCycle} TRAINING`;
+  document.getElementById('today-sections').innerHTML = SECTIONS.map(s => {
+    const done = s.exs.every(e => S.checkedEx[e.id]);
+    return `<div class="ts-row${done ? ' done' : ''}" onclick="switchPg('train')">
+      <div class="ts-ic">${s.icon}</div>
+      <div class="ts-body">
+        <div class="ts-name">${s.name}</div>
+        <div class="ts-meta">${s.exs.length} exercises • ${s.est}</div>
+      </div>
+      <div class="ts-check">${done ? '✓' : ''}</div>
+    </div>`;
+  }).join('');
+
+  // coach tip
+  const tips = [
+    `You're on Day ${dayInCycle} of your ${CYCLES[cycleIdx].name} cycle. Today's priority: ${CYCLES[cycleIdx].focus}.`,
+    `Streak at ${S.streak} days. ${S.streak >= 7 ? 'You\'re building real momentum — consistency is your superpower.' : 'Keep going — the magic starts at 7 consecutive days.'}`,
+    `Your most recent session data shows ${r.ctrl >= 7 ? 'solid control' : 'control needs focus'}. ${r.spd >= 7 ? 'Speed is strong.' : 'Work on relaxing the shoulder for speed.'} ${r.flex < 7 ? 'Prioritise the hip flexor stretch today.' : 'Flexibility looking good.'}`,
+  ];
+  document.getElementById('dash-coach-tip').textContent = tips[S.currentDay % tips.length];
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ TRAINING RENDER
+// ═══════════════════════════════════════════════════════════
+function renderTrain() {
+  const dayInCycle = ((S.currentDay - 1) % 30) + 1;
+  document.getElementById('train-day-lbl').textContent = `DAY ${dayInCycle}`;
+
+  const container = document.getElementById('train-sections');
+  container.innerHTML = '';
+
+  SECTIONS.forEach(section => {
+    const done = section.exs.filter(e => S.checkedEx[e.id]).length;
+    const total = section.exs.length;
+
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:0 2px';
+    hdr.innerHTML = `
+      <span style="font-size:22px">${section.icon}</span>
+      <span style="font-family:var(--font-display);font-size:18px;letter-spacing:2px;color:var(--bright)">${section.name}</span>
+      <span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--dim)">${done}/${total} · ${section.est}</span>
+    `;
+    container.appendChild(hdr);
+
+    const bar = document.createElement('div');
+    bar.className = 'spbar';
+    bar.innerHTML = `<div class="spbar-fill" style="width:${(done/total)*100}%"></div>`;
+    container.appendChild(bar);
+
+    const list = document.createElement('div');
+    list.className = 'ex-list';
+    section.exs.forEach(ex => {
+      const isDone = !!S.checkedEx[ex.id];
+      const item = document.createElement('div');
+      item.className = 'ex-item' + (isDone ? ' done' : '');
+      item.innerHTML = `
+        <div class="ex-cb">${isDone ? '✓' : ''}</div>
+        <div class="ex-body">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-desc">${ex.desc}</div>
+          <div class="ex-foot">
+            ${ex.dur ? `<span class="tag tag-time">⏱ ${fmt(ex.dur)}</span>` : ''}
+            ${ex.reps ? `<span class="tag tag-rep">✕ ${ex.reps}</span>` : ''}
+            <span class="tag tag-tip">${ex.prompt.substring(0,28)}…</span>
+            ${ex.dur ? `<button class="tmr-btn" id="t-${ex.id}" onclick="startTmr(event,'${ex.id}',${ex.dur})">START</button>` : ''}
+          </div>
+        </div>
+      `;
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('tmr-btn') || e.target.tagName === 'BUTTON') return;
+        toggleEx(ex.id);
+      });
+      list.appendChild(item);
+    });
+    container.appendChild(list);
+  });
+
+  renderRatings();
+}
+
+function toggleEx(id) {
+  S.checkedEx[id] = !S.checkedEx[id];
+  saveS();
+  renderTrain();
+}
+
+// ── Timer per exercise
+const ACTIVE_TMRS = {};
+function startTmr(event, id, dur) {
+  event.stopPropagation();
+  const btn = document.getElementById('t-' + id);
+  if (ACTIVE_TMRS[id]) {
+    clearInterval(ACTIVE_TMRS[id].iv);
+    delete ACTIVE_TMRS[id];
+    if (btn) { btn.textContent = 'START'; btn.classList.remove('active'); }
+    return;
+  }
+  let rem = dur;
+  if (btn) { btn.classList.add('active'); btn.textContent = fmt(rem); }
+  const iv = setInterval(() => {
+    rem--;
+    if (btn) btn.textContent = fmt(rem);
+    if (rem <= 0) {
+      clearInterval(iv);
+      delete ACTIVE_TMRS[id];
+      S.checkedEx[id] = true;
+      saveS();
+      renderTrain();
+    }
+  }, 1000);
+  ACTIVE_TMRS[id] = { iv };
+}
+
+function fmt(s) { return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+
+// ── Ratings
+function renderRatings() {
+  const grid = document.getElementById('rating-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  RATINGS_DEF.forEach(r => {
+    const val = S.ratings[r.id] || 5;
+    const row = document.createElement('div');
+    row.className = 'rtg-row';
+    row.innerHTML = `
+      <div class="rtg-top">
+        <span>${r.icon} ${r.label}</span>
+        <span class="rtg-val" id="rv-${r.id}" style="color:${r.color}">${val}</span>
+      </div>
+      <div class="rtg-dots" id="rd-${r.id}">
+        ${Array.from({length:10},(_,i)=>`<div class="rdot${i<val?' on':''}" style="${i<val?`background:${r.color};border-color:${r.color};`:''}"></div>`).join('')}
+      </div>
+    `;
+    grid.appendChild(row);
+    const dots = row.querySelectorAll('.rdot');
+    dots.forEach((d, i) => {
+      d.addEventListener('click', () => {
+        S.ratings[r.id] = i + 1;
+        dots.forEach((dd, j) => {
+          dd.classList.toggle('on', j <= i);
+          dd.style.background = j <= i ? r.color : '';
+          dd.style.borderColor = j <= i ? r.color : '';
+        });
+        document.getElementById('rv-' + r.id).textContent = i + 1;
+      });
+    });
+  });
+}
+
+function saveRatings(complete) {
+  const today = new Date().toISOString().split('T')[0];
+  const notes = document.getElementById('session-notes')?.value || '';
+
+  // Update best ratings
+  RATINGS_DEF.forEach(r => {
+    S.bestRatings[r.id] = Math.max(S.bestRatings[r.id] || 0, S.ratings[r.id] || 0);
+  });
+
+  // Log entry
+  S.sessionLog.push({
+    date: today,
+    day: S.currentDay,
+    cycle: S.cycle,
+    ratings: {...S.ratings},
+    notes,
+    xpEarned: complete ? 100 : 20
+  });
+
+  addXP(complete ? 100 : 20);
+  if (notes) document.getElementById('session-notes').value = '';
+
+  if (complete) {
+    // Mark day complete
+    if (!S.completedDays.includes(S.currentDay)) {
+      S.completedDays.push(S.currentDay);
+      S.totalSessions++;
+
+      // Streak
+      const yesterday = S.sessionLog.slice(-2,-1)[0];
+      if (yesterday) {
+        const d = new Date(today);
+        const yd = new Date(yesterday.date);
+        const diff = (d - yd) / 86400000;
+        S.streak = diff <= 1 ? S.streak + 1 : 1;
+      } else {
+        S.streak = 1;
+      }
+      S.bestStreak = Math.max(S.bestStreak, S.streak);
+    }
+
+    // Advance day
+    S.currentDay++;
+    const dayInCycle = ((S.currentDay - 2) % 30) + 1;
+    if (dayInCycle === 30) {
+      S.cycle++;
+      S.checkedEx = {}; // reset for new cycle
+      toast(`🏆 Cycle ${S.cycle - 1} COMPLETE! New cycle begins!`);
+    } else {
+      S.checkedEx = {};
+    }
+
+    // Personal bests
+    updatePBs();
+    checkAchievements();
+    toast('💪 Day complete! +100 XP');
+  } else {
+    toast('Session saved! +20 XP');
+  }
+
+  saveS();
+  renderDash();
+}
+
+function updatePBs() {
+  if (!S.personalBests) S.personalBests = {};
+  RATINGS_DEF.forEach(r => {
+    const key = r.label + ' Rating';
+    const cur = S.ratings[r.id] || 0;
+    const prev = parseFloat(S.personalBests[key]) || 0;
+    if (cur > prev) S.personalBests[key] = String(cur);
+  });
+  S.personalBests['Longest Streak'] = S.bestStreak + ' days';
+  S.personalBests['Total Sessions'] = String(S.totalSessions);
+  S.personalBests['Kick Height'] = S.personalBests['Kick Height'] || '60°';
+}
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!S.earnedAchievements.includes(a.id) && a.check(S)) {
+      S.earnedAchievements.push(a.id);
+      setTimeout(() => toast(`🏅 ACHIEVEMENT UNLOCKED: ${a.name}!`), 1200);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ STATS RENDER
+// ═══════════════════════════════════════════════════════════
+let chartInst = null, chartMetric = 'ctrl';
+
+function renderStats() {
+  renderBeltList();
+  renderChart();
+  renderPBs();
+  renderCalendar();
+  renderLog();
+}
+
+function renderBeltList() {
+  const el = document.getElementById('belt-list');
+  if (!el) return;
+  const cur = getCurrentBelt();
+  el.innerHTML = BELTS.map(b => {
+    const earned = S.totalXP >= b.xp && S.totalSessions >= b.sessions;
+    const isCur = b.name === cur.name;
+    return `<div class="bl-item ${isCur ? 'current' : earned ? 'earned' : 'locked'}">
+      <div class="bl-dot" style="background:${b.color}"></div>
+      <div class="bl-info">
+        <div class="bl-name" style="color:${earned ? b.color : 'var(--muted)'}">${b.icon} ${b.name}</div>
+        <div class="bl-sub">${b.xp} XP · ${b.sessions} sessions</div>
+      </div>
+      <span class="bl-badge ${isCur ? 'bb-current' : earned ? 'bb-earned' : 'bb-locked'}">
+        ${isCur ? '▶ CURRENT' : earned ? '✓ EARNED' : '🔒 LOCKED'}
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function renderChart() {
+  const canvas = document.getElementById('perf-chart');
+  if (!canvas) return;
+
+  // Tabs
+  const tabsEl = document.getElementById('chart-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = RATINGS_DEF.map(r =>
+      `<div class="ctab${r.id === chartMetric ? ' on' : ''}" onclick="setChartMetric('${r.id}')">${r.icon} ${r.label}</div>`
+    ).join('');
+  }
+
+  const logs = S.sessionLog.slice(-20); // last 20
+  const labels = logs.map(l => `D${l.day}`);
+  const data = logs.map(l => l.ratings[chartMetric] || 0);
+  const rDef = RATINGS_DEF.find(r => r.id === chartMetric);
+  const col = rDef ? getComputedStyle(document.documentElement).getPropertyValue(
+    rDef.color.replace('var(','').replace(')','').trim()
+  ).trim() || '#e8383a' : '#e8383a';
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['Start'],
+      datasets: [{
+        label: rDef?.label || chartMetric,
+        data: data.length ? data : [5],
+        borderColor: '#e8383a',
+        backgroundColor: 'rgba(232,56,58,.08)',
+        tension: 0.45,
+        fill: true,
+        pointBackgroundColor: '#e8383a',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { min: 0, max: 10, grid: {color:'rgba(255,255,255,.04)'}, ticks:{color:'#6a6a82', font:{family:'DM Mono',size:10}} },
+        x: { grid: {color:'rgba(255,255,255,.03)'}, ticks:{color:'#6a6a82', font:{family:'DM Mono',size:9}} }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(19,19,24,.95)',
+          borderColor: 'rgba(255,255,255,.1)',
+          borderWidth: 1,
+          titleColor: '#f4f4ff',
+          bodyColor: '#9696b2',
+          titleFont: {family:'DM Mono'},
+          bodyFont: {family:'DM Mono'},
+        }
+      }
+    }
+  });
+}
+
+function setChartMetric(m) { chartMetric = m; renderChart(); }
+
+function renderPBs() {
+  const el = document.getElementById('pb-grid');
+  if (!el) return;
+  const items = [
+    {key:'Control Rating', icon:'🎯', def:'0'},
+    {key:'Speed Rating', icon:'⚡', def:'0'},
+    {key:'Flexibility Rating', icon:'🧘', def:'0'},
+    {key:'Longest Streak', icon:'🔥', def:'0 days'},
+    {key:'Total Sessions', icon:'📅', def:'0'},
+    {key:'Kick Height', icon:'🦵', def:'60°'},
+  ];
+  el.innerHTML = items.map(item => {
+    const val = S.personalBests[item.key] || item.def;
+    return `<div class="pb-item">
+      <div class="pb-val">${val}</div>
+      <div class="pb-name">${item.icon} ${item.key}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCalendar() {
+  const el = document.getElementById('cal-grid');
+  if (!el) return;
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let html = '';
+  // offset
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  for (let i = 0; i < offset; i++) html += '<div class="cal-cell"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const done = S.sessionLog.some(l => l.date === dateStr);
+    const isToday = d === today.getDate();
+    const isPast = new Date(year, month, d) < today && !isToday;
+    html += `<div class="cal-cell${done?' done':isToday?' today':''}">${d}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderLog() {
+  const el = document.getElementById('log-list');
+  if (!el) return;
+  const recent = [...S.sessionLog].reverse().slice(0, 15);
+  if (!recent.length) { el.innerHTML = '<div class="empty">No sessions logged yet.</div>'; return; }
+  el.innerHTML = recent.map(l => `
+    <div class="log-row">
+      <div>
+        <div class="log-date">${l.date} · DAY ${l.day}</div>
+        ${l.notes ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;font-style:italic">${l.notes.substring(0,60)}${l.notes.length>60?'…':''}</div>` : ''}
+      </div>
+      <div class="log-vals">
+        <span class="log-val" style="color:var(--r)">C:${l.ratings.ctrl||'-'}</span>
+        <span class="log-val" style="color:var(--gold)">S:${l.ratings.spd||'-'}</span>
+        <span class="log-val" style="color:var(--violet)">F:${l.ratings.flex||'-'}</span>
+        <span class="log-val" style="color:var(--teal)">+${l.xpEarned}xp</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ PROGRESS RENDER
+// ═══════════════════════════════════════════════════════════
+function renderProgress() {
+  renderXPCard();
+  renderAchievements();
+  renderSkillTree();
+}
+
+function renderXPCard() {
+  const el = document.getElementById('xp-belt-card');
+  if (!el) return;
+  const belt = getCurrentBelt();
+  const next = getNextBelt();
+  const pct = next ? Math.min(100, ((S.totalXP - belt.xp) / (next.xp - belt.xp)) * 100) : 100;
+  const sessXP = next ? next.sessions - S.totalSessions : 0;
+
+  el.style.background = `linear-gradient(135deg, rgba(0,0,0,.3), rgba(0,0,0,.1)), linear-gradient(135deg, ${belt.color}18, transparent)`;
+  el.style.borderColor = belt.color + '44';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+      <div style="font-size:40px">${belt.icon}</div>
+      <div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:${belt.color};letter-spacing:2px;margin-bottom:3px">CURRENT RANK</div>
+        <div style="font-family:var(--font-display);font-size:28px;letter-spacing:3px;color:${belt.color}">${belt.name}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-family:var(--font-display);font-size:36px;color:var(--gold)">${S.totalXP}</div>
+        <div style="font-size:10px;color:var(--dim);letter-spacing:1px;font-weight:700">LIFETIME XP</div>
+      </div>
+    </div>
+    ${next ? `
+      <div style="font-size:11px;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>→ ${next.icon} ${next.name}</span>
+        <span>${S.totalXP}/${next.xp} XP · ${Math.max(0,sessXP)} sessions needed</span>
+      </div>
+      <div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${belt.color},${belt.color}99);border-radius:4px;transition:width .7s"></div>
+      </div>
+    ` : '<div style="color:var(--gold);font-family:var(--font-mono);font-size:12px">MAX RANK ACHIEVED</div>'}
+  `;
+}
+
+function renderAchievements() {
+  const el = document.getElementById('ach-grid');
+  if (!el) return;
+  el.innerHTML = ACHIEVEMENTS.map(a => {
+    const earned = S.earnedAchievements.includes(a.id);
+    return `<div class="ach-item ${earned ? 'earned' : 'locked'}">
+      <div class="ach-ic">${a.icon}</div>
+      <div class="ach-name">${a.name}</div>
+      <div class="ach-desc">${a.desc}</div>
+      ${earned ? `<div class="ach-earned-tag">✓ EARNED</div>` : `<div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-top:5px">LOCKED</div>`}
+    </div>`;
+  }).join('');
+}
+
+const SKILL_TREE_DATA = [
+  {range:'1–5',   xp:0,    name:'FUNDAMENTALS',     desc:'Front, roundhouse, side kick. Muscle memory & stance.'},
+  {range:'6–10',  xp:300,  name:'CONTROL WORK',     desc:'Slow kicks, chamber holds, pivot mastery. Kill bad habits.'},
+  {range:'11–15', xp:700,  name:'KICK ARTILLERY',   desc:'Hook kick, question mark, back kick. Add unpredictability.'},
+  {range:'16–20', xp:1400, name:'COMBO MASTERY',    desc:'Multi-hit combos, level changes, feints, pocket attacks.'},
+  {range:'21–25', xp:2500, name:'FIGHT INTELLIGENCE',desc:'Timing, countering, reaction. Read before they move.'},
+  {range:'26–30', xp:4000, name:'ADVANCED WEAPONS', desc:'Spinning kicks, combination chains, deceptive footwork.'},
+  {range:'31+',   xp:6000, name:'FIGHT MASTERY',    desc:'Psychological game, rhythm manipulation, championship mindset.'},
+];
+
+function renderSkillTree() {
+  const el = document.getElementById('skill-tree');
+  if (!el) return;
+  el.innerHTML = SKILL_TREE_DATA.map((sk, i) => {
+    const unlocked = S.totalXP >= sk.xp;
+    const isCur = unlocked && (i === SKILL_TREE_DATA.length - 1 || S.totalXP < SKILL_TREE_DATA[i+1].xp);
+    return `<div class="bl-item${isCur?' current':unlocked?' earned':' locked'}" style="margin-bottom:7px">
+      <div style="font-family:var(--font-display);font-size:14px;color:${isCur?'var(--gold)':unlocked?'var(--teal)':'var(--dim)'};min-width:32px">LV ${sk.range}</div>
+      <div class="bl-info">
+        <div class="bl-name">${sk.name}</div>
+        <div class="bl-sub">${sk.desc}</div>
+      </div>
+      <span class="bl-badge ${isCur?'bb-current':unlocked?'bb-earned':'bb-locked'}">
+        ${isCur?'▶ NOW':unlocked?'✓':sk.xp+' XP'}
+      </span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ COMBO BUILDER
+// ═══════════════════════════════════════════════════════════
+const CW_FOCUS_STATE = {};
+CUSTOM_FOCUS.forEach(f => CW_FOCUS_STATE[f] = false);
+
+function renderCombo() {
+  // Move pad
+  const pad = document.getElementById('move-pad');
+  if (pad) {
+    pad.innerHTML = MOVES.map(m => `<button class="mpbtn" onclick="addMove('${m}')">${m}</button>`).join('');
+  }
+  // Focus buttons
+  const fg = document.getElementById('cw-focus-grid');
+  if (fg) {
+    fg.innerHTML = CUSTOM_FOCUS.map(f => `
+      <button onclick="toggleFocus('${f}',this)" style="background:${CW_FOCUS_STATE[f]?'rgba(45,212,191,.1)':'var(--ink4)'};border:1px solid ${CW_FOCUS_STATE[f]?'var(--teal)':'var(--line)'};color:${CW_FOCUS_STATE[f]?'var(--teal)':'var(--body)'};font-family:var(--font-ui);font-size:12px;font-weight:700;padding:10px;border-radius:9px;cursor:pointer;transition:all .15s">${f}</button>
+    `).join('');
+  }
+  renderComboDisplay();
+  renderSavedCombos();
+}
+
+function toggleFocus(f, btn) {
+  CW_FOCUS_STATE[f] = !CW_FOCUS_STATE[f];
+  btn.style.background = CW_FOCUS_STATE[f] ? 'rgba(45,212,191,.1)' : 'var(--ink4)';
+  btn.style.borderColor = CW_FOCUS_STATE[f] ? 'var(--teal)' : 'var(--line)';
+  btn.style.color = CW_FOCUS_STATE[f] ? 'var(--teal)' : 'var(--body)';
+}
+
+function addMove(m) {
+  if (!S.currentCombo) S.currentCombo = [];
+  S.currentCombo.push(m);
+  renderComboDisplay();
+}
+function clearCombo() { S.currentCombo = []; renderComboDisplay(); }
+function removeMove(i) { S.currentCombo.splice(i, 1); renderComboDisplay(); }
+
+function renderComboDisplay() {
+  const el = document.getElementById('combo-display');
+  if (!el) return;
+  if (!S.currentCombo || !S.currentCombo.length) {
+    el.innerHTML = '<span style="color:var(--dim);font-size:12px;font-family:var(--font-mono)">Tap moves below to build...</span>';
+    return;
+  }
+  el.innerHTML = S.currentCombo.map((m, i) => `
+    <div class="combo-chip">${i+1}. ${m} <span class="chip-x" onclick="removeMove(${i})">×</span></div>
+  `).join('');
+}
+
+function saveCombo() {
+  if (!S.currentCombo?.length) { toast('Add some moves first!'); return; }
+  if (!S.savedCombos) S.savedCombos = [];
+  S.savedCombos.push([...S.currentCombo]);
+  saveS();
+  renderSavedCombos();
+  toast('Combo saved! 💾');
+}
+
+function renderSavedCombos() {
+  const el = document.getElementById('saved-combos-list');
+  const emp = document.getElementById('combos-empty');
+  if (!el) return;
+  if (!S.savedCombos?.length) {
+    el.innerHTML = '';
+    if (emp) emp.style.display = 'block';
+    return;
+  }
+  if (emp) emp.style.display = 'none';
+  el.innerHTML = S.savedCombos.map((c, i) => `
+    <div class="log-row">
+      <div style="flex:1">
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--dim);margin-bottom:3px">COMBO ${i+1} · ${c.length} MOVES</div>
+        <div style="font-size:12px;color:var(--body)">${c.join(' → ')}</div>
+      </div>
+      <button class="tmr-btn" onclick="loadCombo(${i})">LOAD</button>
+    </div>
+  `).join('');
+}
+
+function loadCombo(i) { S.currentCombo = [...S.savedCombos[i]]; renderComboDisplay(); toast('Combo loaded!'); }
+
+function practiceCombo() {
+  if (!S.currentCombo?.length) { toast('Build a combo first!'); return; }
+  const combo = S.currentCombo.join(' → ');
+  openFocusCustom('COMBO PRACTICE', combo, '"Rhythm first, then speed. Perfect form before power."', 90);
+}
+
+function cwUpdate() {
+  const v = document.getElementById('cw-dur')?.value;
+  const lbl = document.getElementById('cw-dur-lbl');
+  if (lbl) lbl.textContent = v + ' min';
+}
+
+function startCustom() {
+  const dur = parseInt(document.getElementById('cw-dur')?.value || 20);
+  const focus = Object.entries(CW_FOCUS_STATE).filter(([,v])=>v).map(([k])=>k).join(', ') || 'General';
+  openFocusCustom('CUSTOM WORKOUT', `Focus: ${focus}`, '"Your session. Your rules."', dur * 60);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ STRATEGY / AI COACH
+// ═══════════════════════════════════════════════════════════
+function renderStrategy() {
+  // Strategy cards
+  const el = document.getElementById('strategy-cards');
+  if (el) {
+    el.innerHTML = STRATEGY_TIPS.map(tip => `
+      <div class="tip-card">
+        <div class="tip-cat">${tip.cat}</div>
+        <div class="tip-text">${tip.text}</div>
+        <div class="tip-detail">${tip.detail}</div>
+      </div>
+    `).join('');
+  }
+
+  // Coach messages restore
+  renderCoachMessages();
+}
+
+function renderCoachMessages() {
+  const el = document.getElementById('coach-messages');
+  if (!el) return;
+  if (!S.coachHistory?.length) {
+    el.innerHTML = `<div style="font-size:13px;color:var(--muted);line-height:1.65">
+      Hey, I'm your SENSHI coach. Ask me anything — technique tips, fight strategy, recovery, kick height improvement, or how to beat a specific fighter style. I'm here every day.
+    </div>`;
+    return;
+  }
+  el.innerHTML = S.coachHistory.map(m => `
+    <div style="${m.role === 'user' ? 'text-align:right' : ''}">
+      <div style="display:inline-block;max-width:90%;background:${m.role === 'user' ? 'rgba(232,56,58,.12)' : 'var(--ink4)'};border:1px solid ${m.role === 'user' ? 'rgba(232,56,58,.25)' : 'var(--line)'};border-radius:10px;padding:10px 13px;font-size:13px;line-height:1.55;text-align:left">
+        ${m.content}
+      </div>
+    </div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendCoach() {
+  const input = document.getElementById('coach-input');
+  const sendBtn = document.getElementById('coach-send');
+  const msg = input?.value?.trim();
+  if (!msg) return;
+
+  input.value = '';
+  sendBtn.disabled = true;
+
+  if (!S.coachHistory) S.coachHistory = [];
+  S.coachHistory.push({role:'user', content: msg});
+  renderCoachMessages();
+
+  // Show loading
+  const el = document.getElementById('coach-messages');
+  const loader = document.createElement('div');
+  loader.innerHTML = `<div class="coach-loading"><div class="dot-pulse"></div><div class="dot-pulse"></div><div class="dot-pulse"></div></div>`;
+  el?.appendChild(loader);
+  el && (el.scrollTop = el.scrollHeight);
+
+  try {
+    const belt = getCurrentBelt();
+    const dayInCycle = ((S.currentDay - 1) % 30) + 1;
+    const latestLog = S.sessionLog[S.sessionLog.length - 1];
+    const r = latestLog ? latestLog.ratings : S.ratings;
+
+    const systemPrompt = `You are SENSHI Coach, an expert martial arts coach specialising in karate, taekwondo-style kicks, fight strategy and athletic performance. You are direct, motivating, and technically precise. You give actionable, specific advice — not generic platitudes.
+
+The fighter you're coaching:
+- Current belt: ${belt.name}
+- Training day: ${dayInCycle}/30 of Cycle ${S.cycle} (${CYCLES[(S.cycle-1)%CYCLES.length].name})  
+- Current streak: ${S.streak} days
+- Total sessions: ${S.totalSessions}
+- Latest ratings — Control: ${r.ctrl}/10, Speed: ${r.spd}/10, Balance: ${r.bal}/10, Flexibility: ${r.flex}/10, Fight IQ: ${r.fiq}/10
+
+Keep responses concise (2–4 sentences max), punchy, and immediately useful. No filler. Talk like a real coach, not a chatbot.`;
+
+    const messages = S.coachHistory.map(m => ({role: m.role, content: m.content}));
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'Coach is unavailable right now. Check your API connection.';
+
+    loader.remove();
+    S.coachHistory.push({role: 'assistant', content: reply});
+    if (S.coachHistory.length > 40) S.coachHistory = S.coachHistory.slice(-40);
+    saveS();
+    renderCoachMessages();
+  } catch(e) {
+    loader.remove();
+    const fallback = [
+      "Focus on your weakest rating today. One percent improvement every session compounds massively.",
+      "Snap your kick back faster than you extend it. The retraction is where control lives.",
+      "If your flexibility is below 7, make the hip flexor lunge stretch non-negotiable — 90 seconds each side, every day.",
+      "Speed is relaxation, not effort. Drop the tension from your shoulders and watch your jab get faster.",
+    ];
+    const reply = fallback[Math.floor(Math.random() * fallback.length)];
+    S.coachHistory.push({role: 'assistant', content: reply});
+    saveS();
+    renderCoachMessages();
+  }
+
+  sendBtn.disabled = false;
+  input?.focus();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ FOCUS MODE
+// ═══════════════════════════════════════════════════════════
+let focusRunning = false, focusTmrIv = null, focusRem = 60, focusTotalDur = 60;
+let focusExList = [], focusExIdx = 0;
+
+function openFocus(startIdx) {
+  focusExList = ALL_EX;
+  focusExIdx = startIdx || 0;
+  loadFocusEx();
+  document.getElementById('focus').classList.add('on');
+}
+
+function openFocusCustom(name, desc, prompt, dur) {
+  clearInterval(focusTmrIv);
+  focusRunning = false;
+  focusRem = focusTotalDur = dur;
+  document.getElementById('f-section').textContent = 'CUSTOM';
+  document.getElementById('f-name').textContent = name;
+  document.getElementById('f-desc').textContent = desc;
+  document.getElementById('f-prompt').textContent = prompt;
+  document.getElementById('f-clock').textContent = fmt(dur);
+  document.getElementById('f-clock').classList.remove('warn');
+  document.getElementById('f-btn').textContent = '▶ START';
+  document.getElementById('f-prog').style.width = '0%';
+  document.getElementById('focus').classList.add('on');
+}
+
+function loadFocusEx() {
+  clearInterval(focusTmrIv);
+  focusRunning = false;
+  const ex = focusExList[focusExIdx % focusExList.length];
+  focusRem = focusTotalDur = ex.dur || 60;
+  document.getElementById('f-section').textContent = ex.sectionIcon + ' ' + ex.sectionName;
+  document.getElementById('f-name').textContent = ex.name;
+  document.getElementById('f-desc').textContent = ex.desc;
+  document.getElementById('f-prompt').textContent = `"${ex.prompt}"`;
+  document.getElementById('f-clock').textContent = fmt(focusRem);
+  document.getElementById('f-clock').classList.remove('warn');
+  document.getElementById('f-btn').textContent = '▶ START';
+  document.getElementById('f-prog').style.width = '0%';
+}
+
+function toggleFocusTmr() {
+  const btn = document.getElementById('f-btn');
+  if (focusRunning) {
+    clearInterval(focusTmrIv);
+    focusRunning = false;
+    btn.textContent = '▶ RESUME';
+    return;
+  }
+  focusRunning = true;
+  btn.textContent = '⏸ PAUSE';
+  const clock = document.getElementById('f-clock');
+  const prog = document.getElementById('f-prog');
+  const promptEl = document.getElementById('f-prompt');
+
+  focusTmrIv = setInterval(() => {
+    focusRem--;
+    clock.textContent = fmt(focusRem);
+    prog.style.width = ((focusTotalDur - focusRem) / focusTotalDur * 100) + '%';
+    if (focusRem <= 10) clock.classList.add('warn');
+    if (focusRem <= 0) {
+      clearInterval(focusTmrIv);
+      focusRunning = false;
+      const ex = focusExList[focusExIdx % focusExList.length];
+      if (ex?.id) { S.checkedEx[ex.id] = true; saveS(); }
+      focusExIdx++;
+      setTimeout(() => {
+        if (focusExIdx < focusExList.length) loadFocusEx();
+        else { closeFocus(); toast('🏆 Focus session complete!'); }
+      }, 1200);
+    }
+    // Rotate prompts
+    if (focusRem % 12 === 0) {
+      const p = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+      promptEl.style.opacity = '0';
+      setTimeout(() => { promptEl.textContent = `"${p}"`; promptEl.style.opacity = '1'; }, 350);
+    }
+  }, 1000);
+}
+
+function closeFocus() {
+  clearInterval(focusTmrIv);
+  focusRunning = false;
+  document.getElementById('focus').classList.remove('on');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ TOAST
+// ═══════════════════════════════════════════════════════════
+let toastTmr;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██ INIT
+// ═══════════════════════════════════════════════════════════
+loadS();
+updatePBs();
+checkAchievements();
+renderDash();
+
+// Kick height input on PB
+// Allow user to update kick height manually from dash
+setTimeout(() => {
+  const kickEl = document.getElementById('ds-kick');
+  if (kickEl) {
+    kickEl.style.cursor = 'pointer';
+    kickEl.title = 'Tap to update';
+    kickEl.addEventListener('click', () => {
+      const input = prompt('Enter your current max kick height (e.g. 90°, head height, chest):');
+      if (input) {
+        S.personalBests['Kick Height'] = input;
+        kickEl.textContent = input;
+        saveS();
+        toast('Kick height updated! 🦵');
+      }
+    });
+  }
+}, 300);
+</script>
+</body>
+</html>
