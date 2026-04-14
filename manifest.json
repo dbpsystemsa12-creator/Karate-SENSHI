@@ -1,18 +1,40 @@
 {
-  "name": "SENSHI Fight Tracker",
+  "name": "SENSHI — Karate Fight Tracker",
   "short_name": "SENSHI",
-  "description": "Lifetime martial arts and kick training tracker.",
+  "description": "Lifetime karate and martial arts training tracker with AI coach, round timer, and sparring log.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#060608",
   "theme_color": "#060608",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "fitness", "lifestyle"],
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/806/806542.png",
-      "type": "image/png",
-      "sizes": "512x512",
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
       "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start Training",
+      "short_name": "TRAIN",
+      "description": "Go directly to today's training",
+      "url": "./index.html#train"
+    },
+    {
+      "name": "Round Timer",
+      "short_name": "TIMER",
+      "description": "Open the round timer",
+      "url": "./index.html#timer"
     }
   ]
 }
