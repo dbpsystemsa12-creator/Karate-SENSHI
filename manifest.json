@@ -1,12 +1,12 @@
 {
-  "name": "FightRoutine Pro",
+  "name": "FightPro — DBP Systems",
   "short_name": "FightPro",
-  "description": "Elite martial arts training companion for serious student athletes",
-  "start_url": "/index.html",
+  "description": "DBP Systems Martial Arts, Calisthenics, and Recovery Tracker.",
+  "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#080810",
+  "theme_color": "#080810",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
@@ -20,22 +20,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["health", "fitness", "sports"],
-  "shortcuts": [
-    {
-      "name": "Timer",
-      "short_name": "Timer",
-      "description": "Quick access to training timer",
-      "url": "/index.html#timer"
-    },
-    {
-      "name": "Log Workout",
-      "short_name": "Log",
-      "description": "Log today's training",
-      "url": "/index.html#workout"
-    }
-  ],
-  "lang": "en",
-  "dir": "ltr"
+  ]
 }
