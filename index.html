@@ -1371,10 +1371,13 @@ function startClock() {
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   function tick() {
     const n = new Date();
-    const h = String(n.getHours()).padStart(2,'0');
+    let h = n.getHours();
     const m = String(n.getMinutes()).padStart(2,'0');
-    document.getElementById('clock').textContent = h + ':' + m;
-    document.getElementById('clock-day').textContent = DAYS[n.getDay()].toUpperCase();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const hStr = String(h).padStart(2,'0');
+    document.getElementById('clock').textContent = hStr + ':' + m;
+    document.getElementById('clock-day').textContent = DAYS[n.getDay()].toUpperCase() + ' · ' + ampm;
     document.getElementById('clock-date-str').textContent = DAYS[n.getDay()].toUpperCase() + ' · ' + n.getDate() + ' ' + MONTHS[n.getMonth()].toUpperCase() + ' ' + n.getFullYear();
     document.getElementById('header-date-str') && (document.getElementById('header-date-str').textContent = DAYS[n.getDay()] + ', ' + n.getDate() + ' ' + MONTHS[n.getMonth()]);
   }
