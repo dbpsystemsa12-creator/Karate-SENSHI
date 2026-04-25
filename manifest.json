@@ -1,12 +1,13 @@
 {
   "name": "FightPro — DBP Systems",
   "short_name": "FightPro",
-  "description": "DBP Systems Martial Arts, Calisthenics, and Recovery Tracker.",
+  "description": "A professional martial arts training companion by DBP Systems. Track your karate sessions, streaks, sleep, and progress.",
   "start_url": "./index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#080810",
   "theme_color": "#080810",
-  "orientation": "portrait-primary",
+  "categories": ["fitness", "health", "sports"],
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +20,23 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Timer",
+      "short_name": "Timer",
+      "description": "Open the training timer",
+      "url": "./index.html#timer",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Schedule",
+      "short_name": "Schedule",
+      "description": "View today's schedule",
+      "url": "./index.html#routine",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
