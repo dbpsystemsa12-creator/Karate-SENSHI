@@ -75,6 +75,11 @@ header{flex-shrink:0;height:var(--header-h);padding:0 18px;display:flex;align-it
 .notify-btn:hover{color:var(--amber);border-color:var(--amber)}
 .notify-btn.active{color:var(--amber);border-color:var(--amber);background:var(--amberbg)}
 
+/* NOW BTN in header */
+.now-btn{display:flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--red),var(--purple));color:#fff;font-size:11px;font-weight:800;padding:7px 13px;border-radius:20px;font-family:var(--font-d);letter-spacing:1.5px;cursor:pointer;border:none;text-transform:uppercase;box-shadow:0 0 16px rgba(255,23,68,0.35);transition:all 0.2s;animation:nowpulse 2.5s ease-in-out infinite}
+@keyframes nowpulse{0%,100%{box-shadow:0 0 16px rgba(255,23,68,0.35)}50%{box-shadow:0 0 28px rgba(255,23,68,0.6)}}
+.now-btn:active{transform:scale(0.95)}
+
 /* MAIN */
 main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
 main::-webkit-scrollbar{display:none}
@@ -334,8 +339,6 @@ textarea{resize:none;line-height:1.6}
 .bar-inner.has-data{background:var(--red)}
 .bar-inner.has-data.today{background:var(--green)}
 .bar-day-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;font-family:var(--font-d);font-weight:700;letter-spacing:0.5px}
-.chart-axis{display:flex;justify-content:flex-end;padding:6px 4px 0}
-.chart-axis-lbl{font-size:9px;color:var(--muted);font-family:var(--font-m)}
 
 .ach-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;align-items:center;gap:14px;margin-bottom:8px;transition:all 0.2s}
 .ach-card.unlocked{border-color:rgba(255,171,0,0.25);background:rgba(255,171,0,0.04)}
@@ -410,6 +413,437 @@ textarea{resize:none;line-height:1.6}
 .dbp-credit{text-align:center;padding:20px;font-size:10px;color:var(--dim);font-family:var(--font-m);letter-spacing:2px;text-transform:uppercase}
 .dbp-credit span{color:var(--muted)}
 
+/* ════════════════════════════════════════════
+   NOW POPUP — "WHAT TO DO RIGHT NOW"
+   ════════════════════════════════════════════ */
+#now-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease);
+}
+#now-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+#now-sheet {
+  background: var(--bg2);
+  border-radius: 28px 28px 0 0;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  transform: translateY(100%);
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+#now-overlay.open #now-sheet {
+  transform: translateY(0);
+}
+
+/* draggable handle */
+.now-handle-bar {
+  width: 44px; height: 4px;
+  background: var(--dim);
+  border-radius: 2px;
+  margin: 14px auto 0;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+/* scrollable body */
+#now-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 16px 20px 32px;
+  -webkit-overflow-scrolling: touch;
+}
+#now-body::-webkit-scrollbar { display: none; }
+
+/* header row */
+.now-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.now-greeting {
+  font-family: var(--font-d);
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1;
+  color: var(--text);
+}
+.now-greeting em { color: var(--red); font-style: normal; }
+.now-time-badge {
+  font-family: var(--font-m);
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bg4);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.now-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  letter-spacing: 0.3px;
+}
+
+/* BIG CURRENT TASK */
+.now-current-task {
+  background: linear-gradient(135deg, rgba(255,23,68,0.18), rgba(224,64,251,0.08));
+  border: 1px solid var(--redbr);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.now-current-task::after {
+  content: '';
+  position: absolute;
+  top: -50px; right: -50px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(255,23,68,0.12), transparent 70%);
+  pointer-events: none;
+}
+.now-ct-tag {
+  font-family: var(--font-d);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.now-ct-tag::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.now-ct-title {
+  font-family: var(--font-d);
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: 1px;
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+.now-ct-time {
+  font-family: var(--font-m);
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.now-ct-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.now-btn-done {
+  background: var(--green);
+  color: #000;
+  font-family: var(--font-d);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.now-btn-done:active { transform: scale(0.96); }
+.now-btn-skip {
+  background: var(--bg4);
+  color: var(--muted);
+  font-family: var(--font-d);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 13px;
+  border-radius: 12px;
+  border: 1px solid var(--border2);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.now-btn-skip:active { transform: scale(0.96); }
+
+/* SECTION LABEL */
+.now-section-label {
+  font-family: var(--font-d);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin: 20px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.now-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* UPCOMING TASKS */
+.now-task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.now-task-row:active { background: var(--bg4); }
+.now-task-row.done-row { opacity: 0.45; }
+.now-task-row.done-row .now-task-title { text-decoration: line-through; color: var(--muted); }
+.now-task-row.overdue { border-color: rgba(255,171,0,0.3); }
+.now-task-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.now-task-info { flex: 1; min-width: 0; }
+.now-task-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.now-task-time {
+  font-family: var(--font-m);
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.now-task-time.overdue-time { color: var(--amber); }
+.now-task-check {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s var(--spring);
+}
+.now-task-check.checked {
+  background: var(--green);
+  border-color: var(--green);
+}
+.now-task-check svg {
+  width: 13px; height: 13px;
+  fill: transparent;
+  transition: fill 0.2s;
+}
+.now-task-check.checked svg { fill: #000; }
+
+/* PROGRESS RING */
+.now-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.now-ring-wrap {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+.now-ring-wrap svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.now-ring-bg { fill: none; stroke: var(--bg4); stroke-width: 5; }
+.now-ring-fill {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s var(--ease);
+}
+.now-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-d);
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text);
+}
+.now-progress-info { flex: 1; }
+.now-progress-title {
+  font-family: var(--font-d);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+.now-progress-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* QUICK ACTIONS */
+.now-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.now-quick-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.now-quick-btn:active { transform: scale(0.97); }
+.now-quick-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.now-quick-label {
+  font-family: var(--font-d);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+.now-quick-sub {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 1px;
+  font-family: var(--font-m);
+}
+
+/* RECOVERY BLOCK */
+.now-recovery-block {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.now-rec-score {
+  font-family: var(--font-d);
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.now-rec-info { flex: 1; }
+.now-rec-title {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-d);
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.now-rec-msg { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* COACH INSIGHT */
+.now-coach-block {
+  background: linear-gradient(135deg, rgba(224,64,251,0.08), rgba(68,138,255,0.06));
+  border: 1px solid rgba(224,64,251,0.2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.now-coach-tag {
+  font-size: 9px;
+  color: var(--purple);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: var(--font-d);
+  margin-bottom: 6px;
+}
+.now-coach-msg {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+/* CLOSE BTN */
+.now-close-row {
+  padding: 0 20px 20px;
+  flex-shrink: 0;
+}
+.now-close-btn {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-family: var(--font-d);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.now-close-btn:hover { color: var(--text); border-color: var(--border2); }
+.now-close-btn:active { transform: scale(0.98); }
+
 /* SCROLL FIX */
 .view-scroll-spacer{height:20px}
 </style>
@@ -446,9 +880,7 @@ textarea{resize:none;line-height:1.6}
         <span class="fire">🔥</span>
         <span id="hdr-streak-num">0</span>
       </div>
-      <div class="notify-btn" id="notify-btn" onclick="toggleNotifyPanel()" title="Notifications">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-      </div>
+      <button class="now-btn" onclick="openNow()">⚡ NOW</button>
     </div>
   </header>
 
@@ -492,6 +924,16 @@ textarea{resize:none;line-height:1.6}
         </div>
       </div>
 
+      <!-- Tap NOW button prompt card -->
+      <div style="background:linear-gradient(135deg,rgba(255,23,68,0.1),rgba(224,64,251,0.06));border:1px solid rgba(255,23,68,0.25);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer" onclick="openNow()">
+        <div style="font-size:30px">⚡</div>
+        <div>
+          <div style="font-family:var(--font-d);font-size:18px;font-weight:900;color:var(--text);letter-spacing:1px">WHAT TO DO RIGHT NOW</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Tap to see your current task, checklist & quick actions</div>
+        </div>
+        <div style="color:var(--red);font-size:20px;margin-left:auto">›</div>
+      </div>
+
       <div class="upnext-card" id="upnext-card">
         <div class="upnext-label">Up Next</div>
         <div class="upnext-title" id="upnext-title">Loading...</div>
@@ -531,7 +973,6 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-cal">
       <div class="sec-title">TRAIN<br><em>CALENDAR</em></div>
       <div class="sec-sub">Your daily training history at a glance</div>
-
       <div class="card">
         <div class="cal-header">
           <div class="cal-month" id="cal-month-title">April 2025</div>
@@ -547,7 +988,6 @@ textarea{resize:none;line-height:1.6}
           <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--red);border-radius:50%"></div>Today</div>
         </div>
       </div>
-
       <div class="streak-hero">
         <div class="streak-fire">🔥</div>
         <div class="streak-num-big" id="cal-streak-big">0</div>
@@ -557,17 +997,14 @@ textarea{resize:none;line-height:1.6}
           <div class="streak-sub" style="color:var(--muted);font-size:11px;margin-top:2px;font-family:var(--font-m)">Started: <span id="cal-streak-start">--</span></div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-title">This Week</div>
         <div class="week-strip" id="week-strip"></div>
       </div>
-
       <div class="card">
         <div class="card-title">Day Detail — <span id="cal-selected-date" style="color:var(--red)">Today</span></div>
         <div id="cal-day-detail"></div>
       </div>
-
       <div class="dbp-credit">© 2025 <span>DBP</span></div>
     </section>
 
@@ -580,18 +1017,14 @@ textarea{resize:none;line-height:1.6}
         </div>
         <button class="btn btn-secondary btn-sm" onclick="openEditSchedule()">✏ Edit</button>
       </div>
-
       <div class="prog-bar-wrap">
         <div class="prog-bar-fill" id="prog-bar-fill" style="width:0%"></div>
       </div>
-
       <div class="timeline" id="routine-list"></div>
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
         <button class="btn btn-ghost" onclick="resetRoutine()">↺ Reset Day</button>
         <button class="btn btn-primary" onclick="openEditSchedule()">Edit Schedule</button>
       </div>
-
       <div class="dbp-credit">© 2025 <span>DBP</span></div>
     </section>
 
@@ -599,14 +1032,12 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-workout">
       <div class="sec-title">TRAINING<br><em>LOG</em></div>
       <div class="sec-sub">Log every rep. Every rep counts.</div>
-
       <div class="sub-tabs">
         <button class="tab-btn active" onclick="switchWorkoutTab(this,'karate')">Karate</button>
         <button class="tab-btn" onclick="switchWorkoutTab(this,'strength')">Strength</button>
         <button class="tab-btn" onclick="switchWorkoutTab(this,'grip')">Grip</button>
         <button class="tab-btn" onclick="switchWorkoutTab(this,'cali')">Planche</button>
       </div>
-
       <!-- KARATE -->
       <div class="tab-panel active" id="tp-karate">
         <div class="card">
@@ -633,7 +1064,6 @@ textarea{resize:none;line-height:1.6}
         </div>
         <div id="karate-notes-log"></div>
       </div>
-
       <!-- STRENGTH -->
       <div class="tab-panel" id="tp-strength">
         <div class="card">
@@ -671,14 +1101,13 @@ textarea{resize:none;line-height:1.6}
         </div>
         <div class="card" style="border-color:rgba(255,171,0,0.2)">
           <div class="card-title" style="color:var(--amber)">Recommended Routine</div>
-          <div class="ex-block"><div class="ex-focus-tag">Push · Chest/Shoulders/Triceps</div><div class="ex-title">Floor Dumbbell Press</div><div class="ex-sets">3 × 12–15 reps</div><div class="ex-note">Core tight. Press explosively, lower 3 sec. Builds pushing power for gyaku-zuki.</div></div>
-          <div class="ex-block"><div class="ex-focus-tag">Pull · Back/Biceps</div><div class="ex-title">Bent-over Row</div><div class="ex-sets">3 × 10–12 reps each arm</div><div class="ex-note">Hinge at hips, back flat. Row elbow to hip. Mimics guard break power in kumite.</div></div>
-          <div class="ex-block"><div class="ex-focus-tag">Shoulders</div><div class="ex-title">Arnold Press</div><div class="ex-sets">3 × 10 reps</div><div class="ex-note">Palms facing you, rotate out as you press. Builds blocking shoulder stability.</div></div>
-          <div class="ex-block"><div class="ex-focus-tag">Core · Rotation Power</div><div class="ex-title">Russian Twist</div><div class="ex-sets">3 × 20 reps (10/side)</div><div class="ex-note">This is your hip rotation generator for kicks. Full rotation, controlled tempo.</div></div>
-          <div class="ex-block"><div class="ex-focus-tag">Legs</div><div class="ex-title">Goblet Squat</div><div class="ex-sets">4 × 15 reps</div><div class="ex-note">Deep squat, knees out. Builds stance stability and explosive kick takeoffs.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Push · Chest/Shoulders/Triceps</div><div class="ex-title">Floor Dumbbell Press</div><div class="ex-sets">3 × 12–15 reps</div><div class="ex-note">Core tight. Press explosively, lower 3 sec.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Pull · Back/Biceps</div><div class="ex-title">Bent-over Row</div><div class="ex-sets">3 × 10–12 reps each arm</div><div class="ex-note">Hinge at hips, back flat. Row elbow to hip.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Shoulders</div><div class="ex-title">Arnold Press</div><div class="ex-sets">3 × 10 reps</div><div class="ex-note">Palms facing you, rotate out as you press.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Core · Rotation Power</div><div class="ex-title">Russian Twist</div><div class="ex-sets">3 × 20 reps (10/side)</div><div class="ex-note">Your hip rotation generator for kicks.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Legs</div><div class="ex-title">Goblet Squat</div><div class="ex-sets">4 × 15 reps</div><div class="ex-note">Deep squat, knees out.</div></div>
         </div>
       </div>
-
       <!-- GRIP -->
       <div class="tab-panel" id="tp-grip">
         <div class="card">
@@ -715,12 +1144,11 @@ textarea{resize:none;line-height:1.6}
         </div>
         <div class="card" style="border-color:rgba(0,229,255,0.15)">
           <div class="card-title" style="color:var(--cyan)">Grip Power Protocol</div>
-          <div class="ex-block"><div class="ex-focus-tag">Crushing Strength</div><div class="ex-title">Gripper Reps + Holds</div><div class="ex-sets">5 sets: 10 reps + 10s close hold</div><div class="ex-note">Foundation. Strong grip = control + power in every technique.</div></div>
-          <div class="ex-block"><div class="ex-focus-tag">Forearm Flexors</div><div class="ex-title">Wrist Curl (supinated)</div><div class="ex-sets">3 × 20 reps, light and slow</div><div class="ex-note">Full range of motion. Never rush. Quality reps over heavy weight.</div></div>
-          <div class="ex-block"><div class="ex-focus-tag">Compound Forearm</div><div class="ex-title">Zottman Curl</div><div class="ex-sets">3 × 10 reps</div><div class="ex-note">Curl up palms up, rotate to palms down on the way down. Hits brachioradialis and biceps together.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Crushing Strength</div><div class="ex-title">Gripper Reps + Holds</div><div class="ex-sets">5 sets: 10 reps + 10s close hold</div><div class="ex-note">Foundation. Strong grip = control + power.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Forearm Flexors</div><div class="ex-title">Wrist Curl (supinated)</div><div class="ex-sets">3 × 20 reps, light and slow</div><div class="ex-note">Full range of motion. Never rush.</div></div>
+          <div class="ex-block"><div class="ex-focus-tag">Compound Forearm</div><div class="ex-title">Zottman Curl</div><div class="ex-sets">3 × 10 reps</div><div class="ex-note">Curl up palms up, rotate to palms down on the way down.</div></div>
         </div>
       </div>
-
       <!-- PLANCHE -->
       <div class="tab-panel" id="tp-cali">
         <div class="card">
@@ -769,7 +1197,6 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-lessons">
       <div class="sec-title">KARATE<br><em>MASTERY</em></div>
       <div class="sec-sub">Technique library • Study anywhere</div>
-
       <div class="sub-tabs">
         <button class="tab-btn active" onclick="switchLessonTab(this,'fundamentals')">Fundamentals</button>
         <button class="tab-btn" onclick="switchLessonTab(this,'strikes')">Strikes</button>
@@ -786,7 +1213,6 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-sleep">
       <div class="sec-title">RECOVERY<br><em>CENTER</em></div>
       <div class="sec-sub">You grow in recovery, not in training</div>
-
       <div class="card">
         <div class="card-title">Recovery Score</div>
         <div class="recovery-score-big">
@@ -796,23 +1222,15 @@ textarea{resize:none;line-height:1.6}
         </div>
         <div id="rscore-pills" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px"></div>
       </div>
-
       <div class="card">
         <div class="card-title">Log Night Sleep</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <div style="flex:1">
-            <div class="input-label">Bedtime</div>
-            <input type="time" id="sleep-start" value="22:00">
-          </div>
+          <div style="flex:1"><div class="input-label">Bedtime</div><input type="time" id="sleep-start" value="22:00"></div>
           <div style="padding-top:18px;color:var(--muted);font-size:18px">→</div>
-          <div style="flex:1">
-            <div class="input-label">Wake Up</div>
-            <input type="time" id="sleep-end" value="05:00">
-          </div>
+          <div style="flex:1"><div class="input-label">Wake Up</div><input type="time" id="sleep-end" value="05:00"></div>
         </div>
         <button class="btn btn-primary" onclick="logSleep()">Save Sleep</button>
       </div>
-
       <div class="card">
         <div class="card-title">Log Nap</div>
         <div class="input-row" style="margin-bottom:10px">
@@ -821,12 +1239,10 @@ textarea{resize:none;line-height:1.6}
         </div>
         <button class="btn btn-secondary" onclick="logNap()">Log Nap</button>
       </div>
-
       <div class="card">
         <div class="card-title">Sleep History</div>
         <div id="sleep-history"></div>
       </div>
-
       <div class="dbp-credit">© 2025 <span>DBP</span></div>
     </section>
 
@@ -834,7 +1250,6 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-timer">
       <div class="sec-title">TRAINING<br><em>TIMER</em></div>
       <div class="sec-sub">Interval rounds · Focus mode</div>
-
       <div class="timer-center-display">
         <div class="timer-ring-wrap">
           <svg viewBox="0 0 230 230">
@@ -847,14 +1262,12 @@ textarea{resize:none;line-height:1.6}
             <div class="timer-round-lbl" id="timer-rounds">Round 1 / 3</div>
           </div>
         </div>
-
         <div class="timer-btns">
           <button class="btn btn-green" id="btn-start" onclick="startTimer()">▶ Start</button>
           <button class="btn btn-secondary" onclick="resetTimer()">↺ Reset</button>
         </div>
         <button class="btn btn-ghost" id="btn-pause" onclick="pauseTimer()" style="width:100%;display:none">⏸ Pause</button>
       </div>
-
       <div class="card">
         <div class="card-title">Presets</div>
         <div class="timer-presets">
@@ -872,7 +1285,6 @@ textarea{resize:none;line-height:1.6}
         </div>
         <button class="btn btn-primary" onclick="applyCustomTimer()">Apply</button>
       </div>
-
       <div class="dbp-credit">© 2025 <span>DBP</span></div>
     </section>
 
@@ -880,7 +1292,6 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-stats">
       <div class="sec-title">PROGRESS<br><em>STATS</em></div>
       <div class="sec-sub">Track your evolution as a martial artist</div>
-
       <div class="streak-hero">
         <div class="streak-fire">🔥</div>
         <div class="streak-num-big" id="stats-streak">0</div>
@@ -889,34 +1300,24 @@ textarea{resize:none;line-height:1.6}
           <div class="streak-sub">Best: <span id="stats-best">0</span> days</div>
         </div>
       </div>
-
       <div class="week-strip" id="stats-week-strip" style="margin-bottom:16px"></div>
-
       <div class="stats-grid3">
         <div class="stats-mini"><div class="stats-mini-val" id="stat-sessions">0</div><div class="stats-mini-lbl">Sessions</div></div>
         <div class="stats-mini"><div class="stats-mini-val" id="stat-avg-sleep">0h</div><div class="stats-mini-lbl">Avg Sleep</div></div>
         <div class="stats-mini"><div class="stats-mini-val" id="stat-karate">0</div><div class="stats-mini-lbl">Karate Days</div></div>
       </div>
-
       <div class="card">
         <div class="card-title">7-Day Consistency</div>
         <div class="chart-bars" id="consistency-chart"></div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <span class="pill pill-red">■ Training Day</span>
-          <span class="pill pill-green">■ Today</span>
-        </div>
       </div>
-
       <div class="card">
         <div class="card-title">Achievements</div>
         <div id="achievements-list"></div>
       </div>
-
       <div class="card">
         <div class="card-title">Belt Journey</div>
         <div id="belt-progress"></div>
       </div>
-
       <div class="dbp-credit">© 2025 <span>DBP</span></div>
     </section>
 
@@ -924,28 +1325,17 @@ textarea{resize:none;line-height:1.6}
     <section class="view" id="view-settings">
       <div class="sec-title">SETTINGS</div>
       <div class="sec-sub">Customize your training environment</div>
-
       <div class="card settings-group">
         <div class="card-title">Routine Timing</div>
-        <div class="time-setting-row">
-          <div class="time-setting-label">Wake Up</div>
-          <input type="time" id="set-wake" value="05:00" style="flex:1;margin-bottom:0">
-        </div>
-        <div class="time-setting-row">
-          <div class="time-setting-label">Quit Time</div>
-          <input type="time" id="set-quit" value="07:30" style="flex:1;margin-bottom:0">
-        </div>
-        <div class="time-setting-row">
-          <div class="time-setting-label">Bedtime</div>
-          <input type="time" id="set-sleep" value="22:00" style="flex:1;margin-bottom:0">
-        </div>
+        <div class="time-setting-row"><div class="time-setting-label">Wake Up</div><input type="time" id="set-wake" value="05:00" style="flex:1;margin-bottom:0"></div>
+        <div class="time-setting-row"><div class="time-setting-label">Quit Time</div><input type="time" id="set-quit" value="07:30" style="flex:1;margin-bottom:0"></div>
+        <div class="time-setting-row"><div class="time-setting-label">Bedtime</div><input type="time" id="set-sleep" value="22:00" style="flex:1;margin-bottom:0"></div>
         <div style="margin-top:12px;padding:10px;background:var(--redbg);border:1px solid var(--redbr);border-radius:10px">
           <div style="font-size:11px;color:var(--red);font-family:var(--font-d);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">⚡ Quit Time Alert</div>
-          <div style="font-size:12px;color:var(--muted)">You'll get a soft notification when quit time is near. Active training (timer running) will NOT be interrupted.</div>
+          <div style="font-size:12px;color:var(--muted)">You'll get a soft notification when quit time is near.</div>
         </div>
         <button class="btn btn-primary" onclick="saveTimingSettings()" style="margin-top:12px">Save Timing</button>
       </div>
-
       <div class="card settings-group">
         <div class="card-title">Karate Profile</div>
         <div class="settings-row">
@@ -964,7 +1354,6 @@ textarea{resize:none;line-height:1.6}
           </select>
         </div>
       </div>
-
       <div class="card settings-group">
         <div class="card-title">App Preferences</div>
         <div class="settings-row">
@@ -980,32 +1369,19 @@ textarea{resize:none;line-height:1.6}
           <label class="toggle"><input type="checkbox" id="set-qnotify" checked onchange="saveSettings()"><div class="toggle-track"></div></label>
         </div>
       </div>
-
       <div class="card settings-group">
         <div class="card-title">App Info</div>
-        <div class="settings-row">
-          <div class="settings-label">Version</div>
-          <div style="font-size:12px;color:var(--muted);font-family:var(--font-m)">3.0.0 PRO</div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-label">Product By</div>
-          <div style="font-size:12px;color:var(--muted);font-family:var(--font-d);font-weight:700;letter-spacing:1px">DBP</div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-label">Storage</div>
-          <div style="font-size:12px;color:var(--muted)">Local · Offline</div>
-        </div>
+        <div class="settings-row"><div class="settings-label">Version</div><div style="font-size:12px;color:var(--muted);font-family:var(--font-m)">3.0.0 PRO</div></div>
+        <div class="settings-row"><div class="settings-label">Product By</div><div style="font-size:12px;color:var(--muted);font-family:var(--font-d);font-weight:700;letter-spacing:1px">DBP</div></div>
+        <div class="settings-row"><div class="settings-label">Storage</div><div style="font-size:12px;color:var(--muted)">Local · Offline</div></div>
       </div>
-
       <div class="danger-zone">
         <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--font-d);margin-bottom:6px">Danger Zone</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Permanently erase all logs, streaks, and settings.</div>
         <button class="btn btn-ghost" onclick="factoryReset()" style="color:var(--red);border-color:rgba(255,23,68,0.4)">Reset All Data</button>
       </div>
-
       <div class="dbp-credit">© 2025 <span>DBP</span></div>
     </section>
-
   </main>
 
   <!-- NAV -->
@@ -1038,9 +1414,7 @@ textarea{resize:none;line-height:1.6}
       <svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61z"/></svg>
       Timer
     </button>
-    <!-- Stats accessible from Analytics nav icon (hidden, accessible via stat-btn below) -->
   </nav>
-
 </div>
 
 <!-- TOAST -->
@@ -1059,7 +1433,7 @@ textarea{resize:none;line-height:1.6}
   </div>
 </div>
 
-<!-- ANALYTICS MODAL (accessed via stats btn) -->
+<!-- STATS FAB -->
 <div id="stats-fab" onclick="navigate('stats-modal',null)" style="position:fixed;bottom:calc(var(--nav-h) + 12px);right:16px;width:44px;height:44px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,23,68,0.4);cursor:pointer;z-index:200;transition:all 0.2s">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
 </div>
@@ -1067,8 +1441,19 @@ textarea{resize:none;line-height:1.6}
 <div class="modal-overlay" id="stats-modal-overlay">
   <div class="modal-sheet" style="max-height:90vh">
     <div class="modal-handle"></div>
-    <div style="overflow-y:auto">
-      <div id="stats-modal-content"></div>
+    <div style="overflow-y:auto"><div id="stats-modal-content"></div></div>
+  </div>
+</div>
+
+<!-- ════════════ NOW POPUP ════════════ -->
+<div id="now-overlay" onclick="handleNowOverlayClick(event)">
+  <div id="now-sheet">
+    <div class="now-handle-bar"></div>
+    <div id="now-body">
+      <!-- rendered by JS -->
+    </div>
+    <div class="now-close-row">
+      <button class="now-close-btn" onclick="closeNow()">✕ &nbsp; Close</button>
     </div>
   </div>
 </div>
@@ -1078,24 +1463,14 @@ textarea{resize:none;line-height:1.6}
 const SK = 'fightpro_v3';
 
 const DEFAULT_DATA = {
-  streak: 0,
-  bestStreak: 0,
-  lastDate: null,
-  streakStart: null,
-  wakeTime: '05:00',
-  quitTime: '07:30',
-  bedTime: '22:00',
-  belt: 'Green',
-  style: 'Shotokan',
-  soundEnabled: true,
-  wakelockEnabled: true,
-  qnotifyEnabled: true,
-  plancheLevel: 0,
-  todayFocus: 'Speed',
-  calYear: new Date().getFullYear(),
-  calMonth: new Date().getMonth(),
-  trainingDays: {}, // { 'Mon Apr 21 2025': { done:5, total:11, karate:true } }
-  routine: [
+  streak:0, bestStreak:0, lastDate:null, streakStart:null,
+  wakeTime:'05:00', quitTime:'07:30', bedTime:'22:00',
+  belt:'Green', style:'Shotokan',
+  soundEnabled:true, wakelockEnabled:true, qnotifyEnabled:true,
+  plancheLevel:0, todayFocus:'Speed',
+  calYear:new Date().getFullYear(), calMonth:new Date().getMonth(),
+  trainingDays:{},
+  routine:[
     {id:1,time:'05:00',title:'Wake Up & Hydrate (500ml water)',cat:'morning',done:false},
     {id:2,time:'05:20',title:'Morning Run / Shadow Sparring',cat:'karate',done:false},
     {id:3,time:'06:15',title:'Stretching & Mobility (15 min)',cat:'recovery',done:false},
@@ -1108,7 +1483,7 @@ const DEFAULT_DATA = {
     {id:10,time:'21:00',title:'Dinner & Wind Down',cat:'evening',done:false},
     {id:11,time:'22:00',title:'Sleep (8 hours target)',cat:'sleep',done:false}
   ],
-  karateDrills: [
+  karateDrills:[
     {title:'Shadow Sparring',cat:'Kumite',desc:'3 rounds × 2 min',done:false},
     {title:'Seiken Zuki (Straight Punch)',cat:'Kihon',desc:'100 reps per side',done:false},
     {title:'Oi-Zuki (Lunge Punch)',cat:'Kihon',desc:'5 × 20 down the floor',done:false},
@@ -1121,29 +1496,28 @@ const DEFAULT_DATA = {
     {title:'Block → Counter Combo',cat:'Kumite',desc:'10 × 5 combos',done:false},
     {title:'Kata Practice',cat:'Kata',desc:'3 full runs at speed',done:false}
   ],
-  logs: { strength: [], grip: [], cali: [], karate: [], sleep: [] }
+  logs:{strength:[],grip:[],cali:[],karate:[],sleep:[]}
 };
 
 let D = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
-function save() { localStorage.setItem(SK, JSON.stringify(D)); }
-function load() {
-  const s = localStorage.getItem(SK);
-  if (!s) return;
-  try {
-    const p = JSON.parse(s);
-    // Merge carefully
-    D = { ...D, ...p };
-    if (!D.logs) D.logs = { strength: [], grip: [], cali: [], karate: [], sleep: [] };
-    ['strength','grip','cali','karate','sleep'].forEach(k => { if (!D.logs[k]) D.logs[k] = []; });
-    if (!D.trainingDays) D.trainingDays = {};
-    if (!D.routine || !D.routine.length) D.routine = DEFAULT_DATA.routine.map(r => ({...r}));
-    if (!D.karateDrills) D.karateDrills = DEFAULT_DATA.karateDrills.map(d => ({...d}));
-  } catch(e) { console.warn('load err', e); }
+function save(){localStorage.setItem(SK,JSON.stringify(D));}
+function load(){
+  const s=localStorage.getItem(SK);
+  if(!s)return;
+  try{
+    const p=JSON.parse(s);
+    D={...D,...p};
+    if(!D.logs)D.logs={strength:[],grip:[],cali:[],karate:[],sleep:[]};
+    ['strength','grip','cali','karate','sleep'].forEach(k=>{if(!D.logs[k])D.logs[k]=[];});
+    if(!D.trainingDays)D.trainingDays={};
+    if(!D.routine||!D.routine.length)D.routine=DEFAULT_DATA.routine.map(r=>({...r}));
+    if(!D.karateDrills)D.karateDrills=DEFAULT_DATA.karateDrills.map(d=>({...d}));
+  }catch(e){console.warn('load err',e);}
 }
 
 // ═══════════════ CONSTANTS ═══════════════
-const QUOTES = [
+const QUOTES=[
   ['The more you sweat in training, the less you bleed in battle.','Ancient Warrior Principle'],
   ['A black belt is a white belt who never quit.','Unknown Sensei'],
   ['Speed is not about being fast. It\'s about not being slow.','Bruce Lee'],
@@ -1159,7 +1533,7 @@ const QUOTES = [
   ['Discipline is the bridge between goals and accomplishment.','Jim Rohn'],
 ];
 
-const ACHIEVEMENTS = [
+const ACHIEVEMENTS=[
   {id:'first_day',name:'First Strike',desc:'Complete your first routine',icon:'🥋',unlock:d=>d.streak>=1},
   {id:'week',name:'Week Warrior',desc:'7-day streak achieved',icon:'🔥',unlock:d=>d.streak>=7},
   {id:'iron',name:'Iron Fist',desc:'Log 10 grip sessions',icon:'✊',unlock:d=>d.logs.grip.length>=10},
@@ -1172,7 +1546,7 @@ const ACHIEVEMENTS = [
   {id:'sleeper',name:'Recovery Master',desc:'Log 14 nights of sleep',icon:'😴',unlock:d=>d.logs.sleep.filter(s=>s.type==='night').length>=14},
 ];
 
-const BELTS = [
+const BELTS=[
   {name:'White',color:'#f0f0f0',exp:'Basic stances & etiquette'},
   {name:'Yellow',color:'#ffd700',exp:'Basic techniques mastered'},
   {name:'Orange',color:'#ff8c00',exp:'Combinations & kata basics'},
@@ -1183,131 +1557,101 @@ const BELTS = [
   {name:'Black',color:'#1a1a1a',exp:'Mastery begins here'},
 ];
 
-const BELT_EMOJI = {White:'⬜',Yellow:'🟨',Orange:'🟧',Green:'🟩',Blue:'🟦',Purple:'🟪',Brown:'🟫',Black:'⬛'};
+const BELT_EMOJI={White:'⬜',Yellow:'🟨',Orange:'🟧',Green:'🟩',Blue:'🟦',Purple:'🟪',Brown:'🟫',Black:'⬛'};
 
-const PLANCHE_PROGRAMS = [
+const PLANCHE_PROGRAMS=[
   {level:'Tuck Planche',exercises:[
-    {name:'Planche Lean',sets:'5 × 15–30 sec',note:'Protract shoulders hard. Weight over wrists. Your absolute base.'},
-    {name:'Pseudo Planche Pushup',sets:'4 × 6–12 reps',note:'Lean forward, fingers back. Slow and controlled. Most important pressing exercise.'},
-    {name:'Tuck Planche Hold',sets:'5 × 5–15 sec',note:'Knees to chest, round back, locked elbows. Quality position over time.'},
-    {name:'Pike Pushup',sets:'3 × 10–15 reps',note:'Inverted V. Builds overhead strength for full planche press.'},
+    {name:'Planche Lean',sets:'5 × 15–30 sec',note:'Protract shoulders hard. Weight over wrists.'},
+    {name:'Pseudo Planche Pushup',sets:'4 × 6–12 reps',note:'Lean forward, fingers back. Slow and controlled.'},
+    {name:'Tuck Planche Hold',sets:'5 × 5–15 sec',note:'Knees to chest, round back, locked elbows.'},
+    {name:'Pike Pushup',sets:'3 × 10–15 reps',note:'Inverted V. Builds overhead strength.'},
     {name:'Wrist Conditioning',sets:'Daily: 2 min circles',note:'NEVER skip. Wrist injury is the #1 planche stopper.'},
   ]},
   {level:'Advanced Tuck Planche',exercises:[
-    {name:'Adv. Tuck Hold',sets:'5 × 8–20 sec',note:'Extend hips slightly, back less rounded. Harder than tuck.'},
-    {name:'Tuck → Adv. Tuck Transitions',sets:'3 × 5 transitions',note:'Flow between positions. Builds awareness and full-range strength.'},
-    {name:'Weighted PPP',sets:'4 × 6 reps',note:'Add band or weight vest. Progress load every 2 weeks.'},
-    {name:'L-Sit to Tuck Planche',sets:'3 × 5 transitions',note:'From parallel bars. Massive core + compression demand.'},
+    {name:'Adv. Tuck Hold',sets:'5 × 8–20 sec',note:'Extend hips slightly, back less rounded.'},
+    {name:'Tuck → Adv. Tuck Transitions',sets:'3 × 5 transitions',note:'Flow between positions.'},
+    {name:'Weighted PPP',sets:'4 × 6 reps',note:'Add band or weight vest.'},
+    {name:'L-Sit to Tuck Planche',sets:'3 × 5 transitions',note:'From parallel bars.'},
   ]},
   {level:'Straddle Planche',exercises:[
-    {name:'Straddle Hold Attempt',sets:'5 × max (3–10 sec)',note:'Legs wide. Far easier than full planche. Keep body flat — quality over duration.'},
-    {name:'Straddle PPP',sets:'4 × 4–8 reps',note:'Legs straddle while pressing. Incredible combined demand.'},
-    {name:'One-Leg Planche',sets:'3 × 5–10 sec per leg',note:'One leg extended, one bent. Bridge between tuck and straddle.'},
-    {name:'Planche Pushup Negatives',sets:'4 × 3 reps (5–8s down)',note:'Lower slowly from planche. Builds tendon strength critical for the hold.'},
+    {name:'Straddle Hold Attempt',sets:'5 × max (3–10 sec)',note:'Legs wide. Far easier than full planche.'},
+    {name:'Straddle PPP',sets:'4 × 4–8 reps',note:'Legs straddle while pressing.'},
+    {name:'One-Leg Planche',sets:'3 × 5–10 sec per leg',note:'Bridge between tuck and straddle.'},
+    {name:'Planche Pushup Negatives',sets:'4 × 3 reps (5–8s down)',note:'Lower slowly from planche.'},
   ]},
   {level:'Full Planche',exercises:[
-    {name:'Full Planche Hold',sets:'5 × max (aim 5+ sec)',note:'Legs together, body flat. The goal. Maintain shoulder protraction throughout.'},
-    {name:'Full Planche Pushup',sets:'3 × max reps',note:'The pinnacle of pushing strength. Lower controlled, press explosive.'},
-    {name:'Weighted Planche Work',sets:'3 × 3–5 sec',note:'Weight vest. Handle with extreme caution.'},
-    {name:'Planche to Handstand',sets:'3 × 3 transitions',note:'Requires full planche mastery first. World-class skill.'},
+    {name:'Full Planche Hold',sets:'5 × max (aim 5+ sec)',note:'Legs together, body flat. The goal.'},
+    {name:'Full Planche Pushup',sets:'3 × max reps',note:'The pinnacle of pushing strength.'},
+    {name:'Weighted Planche Work',sets:'3 × 3–5 sec',note:'Weight vest.'},
+    {name:'Planche to Handstand',sets:'3 × 3 transitions',note:'World-class skill.'},
   ]}
 ];
 
-const LESSONS = {
+const LESSONS={
   fundamentals:[
     {title:'Zanshin — The Mind That Remains',level:'Philosophy',duration:'5 min',steps:[
-      {num:'Concept',text:'Zanshin is the awareness that lingers after action. In karate, it means maintaining full alertness before, during, and after every technique. Your eyes should always watch the opponent — never drift after striking.',tip:'Practice: After every punch in shadow sparring, hold your position for 1 second with full focus before returning. Never "switch off."'},
-      {num:'Application',text:'Most beginners drop their guard after landing a technique. This is the most dangerous moment. Zanshin teaches you to stay connected to the opponent even after your strike lands.',tip:'Drill: Do 10 punches. After each one, pause and scan imaginary opponent. Build this into muscle memory.'},
-      {num:'In Kata',text:'Every kata ends with a final technique followed by yame (finish). The moment between the last technique and yame must have maximum zanshin — your energy should feel it has NOT ended.',},
+      {num:'Concept',text:'Zanshin is the awareness that lingers after action. Maintain full alertness before, during, and after every technique.',tip:'After every punch in shadow sparring, hold position 1 second with full focus before returning.'},
+      {num:'Application',text:'Most beginners drop their guard after landing a technique. Zanshin teaches you to stay connected to the opponent even after your strike lands.',tip:'Drill: Do 10 punches. After each one, pause and scan imaginary opponent.'},
     ]},
     {title:'Correct Stance — Zenkutsu-Dachi',level:'Foundation',duration:'10 min',steps:[
-      {num:'Setup',text:'Front foot pointing forward. Back foot at 45°. Front knee bent directly over toes — never past them. Back leg completely straight. Weight: 70% front, 30% back.',tip:'Check: Can you lift your back foot slightly? If yes, you\'re leaning too far forward. Fix the weight ratio.'},
-      {num:'Hips',text:'Hips face forward (shomen) for maximum power transfer. The hip snap is what drives punch force — not just the arm. A locked hip kills 60% of your punch power.',tip:'Drill: Put hand on your hip. Do a lunge punch. Feel the hip snap forward at moment of impact.'},
-      {num:'Common Errors',text:'1. Knee caving inward. 2. Back heel lifting. 3. Looking down. 4. Upper body leaning — stay upright.',tip:'"Wall test": stand a fist-width from wall in zenkutsu-dachi. Your knee shouldn\'t touch the wall when punching.'},
+      {num:'Setup',text:'Front foot pointing forward. Back foot at 45°. Front knee bent directly over toes. Weight: 70% front, 30% back.',tip:'Test: Can you lift your back foot slightly? If yes, you\'re leaning too far forward.'},
+      {num:'Hips',text:'Hips face forward (shomen) for maximum power transfer. The hip snap is what drives punch force.',tip:'Drill: Put hand on your hip. Do a lunge punch. Feel the hip snap forward at moment of impact.'},
     ]},
     {title:'Kime — The Moment of Impact',level:'Foundation',duration:'15 min',steps:[
-      {num:'What Is Kime',text:'Kime is the instantaneous tensing of every muscle at the exact moment of impact, immediately followed by complete relaxation. Without kime, your punch is just a push. With it, it\'s a weapon.',tip:'Feel it: Punch slow motion, then at the last 10cm, snap every muscle tight for 0.1 seconds. That tension + release = kime.'},
-      {num:'Develop Kime',text:'Practice punching slowly, focusing on the contraction at the end. Over time speed increases but the kime principle stays the same. Never sacrifice kime for speed.',tip:'Drill: 50 slow punches with maximum kime focus. Then 50 at 50% speed. Compare the feeling.'},
-      {num:'Kime in Kicks',text:'Same principle in all kicks. Mae-geri without kime is just a push. The snapping extension at full reach, held briefly, is what causes damage and improves control.',},
-    ]},
-    {title:'Breathing in Karate',level:'Foundation',duration:'10 min',steps:[
-      {num:'Kiai',text:'The kiai is not just a yell — it\'s a controlled exhale that tightens your core at the moment of impact, protecting internal organs and maximizing force. It\'s a physical weapon, not a sound effect.',tip:'Practice: Exhale sharply with a "s" sound. Feel your abs contract? That core tension = power + protection.'},
-      {num:'Tactical Breathing',text:'In kumite: breathe out during attacks and blocks. Breathe in during retreats. Never hold breath — holding breath stiffens muscles and slows reaction time by up to 40%.',},
+      {num:'What Is Kime',text:'Kime is the instantaneous tensing of every muscle at the exact moment of impact, immediately followed by complete relaxation.',tip:'Punch slow motion, then at the last 10cm, snap every muscle tight for 0.1 seconds.'},
     ]},
   ],
   strikes:[
     {title:'Seiken Zuki — Correct Fist Formation',level:'Kihon',duration:'5 min',steps:[
-      {num:'Fist Structure',text:'Curl fingers tightly from pinky to index. Thumb locks over middle and index — never inside (broken thumb risk). Impact surface: the two knuckles of index and middle finger ONLY. Keep wrist straight.',tip:'Test: press fist flat on a table. If wrist bends, it\'s wrong. Perfectly straight = safe and powerful.'},
-      {num:'Punch Path',text:'From hikite (chambered at hip) to full extension. Rotate fist 180° during travel — arrives palm-down at impact. Elbow close to body during travel.',tip:'100 slow punches per day, focusing only on rotation timing. It should complete at full extension.'},
-      {num:'Hip Power',text:'Gyaku-zuki derives 70% of power from hip snap. Non-punching hip pulls back as punching hip drives forward. This rotation multiplies force enormously vs arm-only punching.',tip:'Stand sideways to mirror. Watch your hip — it should clearly rotate with each punch.'},
+      {num:'Fist Structure',text:'Curl fingers tightly from pinky to index. Thumb locks over middle and index. Impact surface: two knuckles of index and middle finger ONLY.',tip:'Test: press fist flat on a table. Wrist must be perfectly straight.'},
+      {num:'Hip Power',text:'Gyaku-zuki derives 70% of power from hip snap. Non-punching hip pulls back as punching hip drives forward.',tip:'Stand sideways to mirror. Watch your hip — it should clearly rotate with each punch.'},
     ]},
     {title:'Gyaku-Zuki — The Master Reverse Punch',level:'Kumite',duration:'15 min',steps:[
-      {num:'Why It Dominates',text:'Gyaku-zuki is the most powerful punch in karate and most common scoring technique in competition. The rear hand has more rotation distance, more hip loading, and more body weight.',tip:'In competition footage, count reverse punch scores. It\'s 60–70% of all clean scores.'},
-      {num:'The Launch',text:'Right stance (right foot back). Right hip loads back. Explosion: right hip fires forward, right hand punches, left hand chambers sharply to hip. All simultaneous.',tip:'The pulling of the left arm is as important as the right arm punching. The chamber pulls the hip which drives the punch.'},
-      {num:'Target Selection',text:'Chudan (mid-section) is the highest percentage target. Larger, less mobile than jodan, scores consistently. Don\'t always go for the head — it\'s what everyone expects.',tip:'Drill: 50 slow gyaku-zuki per side with maximum hip rotation. Then shadowspar 2 min using only this technique.'},
-    ]},
-    {title:'Oi-Zuki — Lunge Punch',level:'Kihon',duration:'10 min',steps:[
-      {num:'Mechanics',text:'Step forward with front foot into zenkutsu-dachi while punching with same-side arm. Step and punch arrive simultaneously — not punch then step. Simultaneity = power.',tip:'Many beginners step then punch. This destroys power. Drill slowly: step begins → punch begins → both end at exact same moment.'},
-      {num:'Trajectory',text:'Body moves straight forward like a train on tracks — no rising or falling. Rising wastes energy and shows intent. Head stays at same height throughout.',tip:'Put hand on head. Walk forward in oi-zuki. Your hand should barely move up or down.'},
+      {num:'Why It Dominates',text:'Gyaku-zuki is the most powerful punch in karate and most common scoring technique. The rear hand has more rotation distance and body weight.',tip:'In competition footage, count reverse punch scores. It\'s 60–70% of all clean scores.'},
+      {num:'The Launch',text:'Right stance. Right hip loads back. Explosion: right hip fires forward, right hand punches, left hand chambers sharply to hip. All simultaneous.',tip:'The pulling of the left arm is as important as the right arm punching.'},
     ]},
   ],
   kicks:[
     {title:'Mae-Geri — Front Kick',level:'Kihon',duration:'10 min',steps:[
-      {num:'Chamber First',text:'Pull knee up to chest as high as possible before extending. This loads your weapon. Rushing past the chamber is the #1 mae-geri mistake.',tip:'Stand near wall for balance. 20 slow chambers per leg without extending. Hold 2 seconds each time.'},
-      {num:'Extension',text:'Drive ball of foot (koshi) toward target by extending knee. Never kick with toes — injuries guaranteed. Ankle pulled back (flexed) exposes the ball. Snap back immediately after impact.',tip:'Retract as fast as you extend. Slow retraction leaves your leg out and can be grabbed.'},
-      {num:'Hip Thrust',text:'Push kicking hip forward at moment of impact. This separates a powerful front kick from a weak one. Hip forward = power. Hip back = nothing.',tip:'Practice on heavy bag. You should hear and feel clear impact. Silent kick = no hip thrust.'},
+      {num:'Chamber First',text:'Pull knee up to chest as high as possible before extending. This loads your weapon. Rushing past the chamber is the #1 mae-geri mistake.',tip:'Stand near wall for balance. 20 slow chambers per leg without extending.'},
+      {num:'Hip Thrust',text:'Push kicking hip forward at moment of impact. Hip forward = power. Hip back = nothing.',tip:'Practice on heavy bag. You should hear and feel clear impact.'},
     ]},
     {title:'Mawashi-Geri — Roundhouse',level:'Intermediate',duration:'15 min',steps:[
-      {num:'Mechanics',text:'Pivot on standing foot (45–90°). Raise kicking knee to the side. Rotate hip while extending leg in arc. Impact with ball of foot or instep depending on range.',tip:'The standing foot pivot is critical. Without it, no hip rotation = no power. Practice the pivot alone 30 times first.'},
-      {num:'Height Training',text:'Kick flexibility comes from the hip, not hamstring. Daily hip flexor stretching (pigeon pose, splits work) increases height over months. Be patient.',tip:'Tape mark at current max height on wall/door frame. Check weekly. Improvement will happen.'},
-      {num:'Combination Entry',text:'Fake gyaku-zuki to raise their hands, then kick chudan. They defend high, you attack low.',tip:'Drill: gyaku-zuki (controlled) → switch → mawashi-geri chudan. 20 reps each side. Make it seamless.'},
+      {num:'Mechanics',text:'Pivot on standing foot (45–90°). Raise kicking knee to the side. Rotate hip while extending leg in arc.',tip:'The standing foot pivot is critical. Practice the pivot alone 30 times first.'},
     ]},
   ],
   blocking:[
     {title:'The Philosophy of Blocking',level:'Concept',duration:'5 min',steps:[
-      {num:'Block Is Not Defense',text:'Traditional karate: the block IS a strike. Age-uke should hit the attacker\'s arm with enough force to injure it. If your block is soft, it\'s ineffective.',tip:'Conditioning: block a padded arm 50 times per side. Your forearm must deliver and receive force.'},
-      {num:'Block-Counter as One',text:'Beginner: block then counter. Intermediate: block while stepping. Advanced: the block itself is the counter, with other hand striking simultaneously.',tip:'Practice block with one hand while other punches — simultaneously. After 2 weeks of daily work, it becomes natural.'},
-      {num:'Reading the Attack',text:'Spot shoulder and hip movement before the hand or foot arrives. Early block = maximum control. Late block = damage already done.',},
+      {num:'Block Is Not Defense',text:'Traditional karate: the block IS a strike. Age-uke should hit the attacker\'s arm with enough force to injure it.',tip:'Block a padded arm 50 times per side. Your forearm must deliver and receive force.'},
     ]},
     {title:'Age-Uke — Rising Block',level:'Kihon',duration:'10 min',steps:[
-      {num:'Motion',text:'Start with arm crossing body at waist. Sweep upward in arc, ending with forearm above forehead at 45°, arm bent ~120°. Rotation at top adds deflection power.',tip:'Not a push up — it\'s an arc that deflects downward. The rotation at the top is what adds power.'},
-      {num:'Simultaneous Hikite',text:'As blocking arm rises, other arm chambers sharply to hip. This pulling action contributes to block\'s power.',tip:'Block with vs without hikite. The speed and power difference is dramatic.'},
-    ]},
-    {title:'Soto-Uke — Outside Block',level:'Kihon',duration:'10 min',steps:[
-      {num:'Motion',text:'Start with blocking hand at opposite ear. Sweep outward to block incoming straight punch. End with forearm vertical, fist at shoulder height, elbow at 90°.',tip:'Impact surface is the outer edge of the forearm. This must be conditioned through forearm-on-forearm contact training.'},
-      {num:'Combination: Soto-Uke → Empi',text:'Block incoming punch → elbow rises naturally → drive empi (elbow strike) to face at close range. One flowing motion.',tip:'The block → elbow should feel like ONE movement, not two. The elbow stays bent throughout.'},
+      {num:'Motion',text:'Start with arm crossing body at waist. Sweep upward in arc, ending with forearm above forehead at 45°.',tip:'Not a push up — it\'s an arc that deflects downward. The rotation at the top adds power.'},
     ]},
   ],
   kumite:[
     {title:'Distance and Ma-ai',level:'Kumite',duration:'10 min',steps:[
-      {num:'What Is Ma-ai',text:'Ma-ai is the critical distance where you are safe but your techniques still reach. Too close = danger. Too far = techniques don\'t connect. Ma-ai mastery separates beginners from advanced fighters.',tip:'Your ideal gyaku-zuki distance: punch with full extension. Fist should reach opponent\'s chest with elbow almost straight. That\'s your ma-ai.'},
-      {num:'Controlling Ma-ai',text:'Use footwork (unsoku) to maintain your distance. When opponent advances, retreat exactly the same distance. This keeps YOU in control of when contact happens.',tip:'Partner walks toward you randomly. Maintain exactly one-arm\'s distance without looking at feet. 3 minutes of pure footwork.'},
-      {num:'Breaking Ma-ai',text:'Your attack must close distance instantaneously. The opponent should not perceive your advance until the technique arrives. Explosive hip drive, minimal telegraph.',},
+      {num:'What Is Ma-ai',text:'Ma-ai is the critical distance where you are safe but your techniques still reach. Ma-ai mastery separates beginners from advanced fighters.',tip:'Your ideal gyaku-zuki distance: punch with full extension. Fist should reach opponent\'s chest with elbow almost straight.'},
     ]},
     {title:'Sen — Timing and Initiative',level:'Kumite',duration:'15 min',steps:[
-      {num:'Three Types',text:'Go-no-sen: block then counter (reactive). Sen-no-sen: attack at same moment, intercepting their technique. Sen-sen-no-sen: attack BEFORE they attack, reading their intent.',tip:'Train go-no-sen first. Only advance to sen-no-sen when blocks are automatic (3–6 months of dedicated practice).'},
-      {num:'Reading Telegraphing',text:'Every opponent telegraphs. Common tells: shoulder drops before punch, eyes shift to target, weight shifts, feet adjust. Study the angle before the technique.',tip:'Partner throws slowly. Your job is to predict 0.5 sec before they move. What do you see? Catalog their specific tells.'},
-    ]},
-    {title:'Competition Strategy',level:'Advanced',duration:'10 min',steps:[
-      {num:'Score First',text:'Scoring first changes the opponent\'s mindset — they must chase. This puts you in control mode: defend the lead. Being chased forces risk.',tip:'Make "score first by any technique" a priority for 50% of training kumite sessions.'},
-      {num:'The Last 10 Seconds',text:'Most decisive moment. If winning: clinch range, force resets, give no openings. If losing: one clean technique wins — be decisive. Know the clock.',tip:'Practice "last 10 seconds" sparring: set timer 2 min, but 10s before it sounds, the losing person MUST take action.'},
+      {num:'Three Types',text:'Go-no-sen: block then counter. Sen-no-sen: attack at same moment. Sen-sen-no-sen: attack BEFORE they attack.',tip:'Train go-no-sen first. Only advance to sen-no-sen when blocks are automatic.'},
     ]},
   ],
   kata:[
     {title:'What Kata Actually Teaches',level:'Philosophy',duration:'5 min',steps:[
-      {num:'Kata Is Not Performance',text:'Kata is a library of fighting techniques encoded in movement. Each movement has specific application (bunkai). Without understanding bunkai, you\'re reading words without knowing their meaning.',tip:'After running kata at speed, walk through technique by technique and verbalize: what are you blocking, where is the opponent, what are you countering with?'},
-      {num:'Speed vs Power',text:'Competition kata requires explosive speed changes — extremely fast techniques punctuated by complete stillness (zanshin). The contrast is what scores.',tip:'Run kata 3 times: (1) slow and perfect, (2) half speed max tension, (3) full speed with sudden stops. The third is what judges want.'},
-    ]},
-    {title:'Heian Shodan — Breakdown',level:'Kata',duration:'20 min',steps:[
-      {num:'Opening (1–3)',text:'Turn left, gedan-barai in zenkutsu-dachi = defending a low attack from left. Forward oi-zuki = counter. Turn 180°, gedan-barai = new threat from right.',tip:'Think: multiple opponents, not a dance. Where exactly is each one? How close? What are they doing?'},
-      {num:'The T-Junction (4–7)',text:'Turn to address attacks from in front. Each 90° and 180° turn faces a new opponent. The gedan-barai greets each new threat.',tip:'Mark floor with tape for each facing direction. Practice the pattern without techniques first.'},
-      {num:'Competition Tips',text:'First kiai (movement 8) should be explosive and unexpected. Face: controlled intensity — not fear, not smile. End in yame with full zanshin for 2 full seconds.',tip:'Record your kata. Is the kiai explosive? Are turns crisp? Is final zanshin held? Use this feedback loop weekly.'},
+      {num:'Kata Is Not Performance',text:'Kata is a library of fighting techniques encoded in movement. Each movement has specific application (bunkai).',tip:'Walk through technique by technique and verbalize: what are you blocking, where is the opponent?'},
     ]},
   ],
 };
 
+// ═══════════════ CAT COLORS ═══════════════
+const CAT_COLORS={
+  morning:'#ffab00',school:'#448aff',recovery:'#00e676',
+  karate:'#ff1744',strength:'#e040fb',grip:'#00e5ff',
+  cali:'#ff6d00',evening:'#7986cb',sleep:'#5c6bc0'
+};
+
 // ═══════════════ INIT ═══════════════
-function init() {
+function init(){
   load();
   checkNewDay();
   startClock();
@@ -1324,277 +1668,540 @@ function init() {
   renderPlancheProgram();
   loadSettings();
   renderLessons('fundamentals');
-  // Set planche level
-  document.querySelectorAll('.phase-item').forEach((el,i) => {
-    el.classList.toggle('active-phase', i === D.plancheLevel);
+  document.querySelectorAll('.phase-item').forEach((el,i)=>{
+    el.classList.toggle('active-phase',i===D.plancheLevel);
   });
-  // Set focus chips
-  document.querySelectorAll('.focus-chip').forEach(c => {
-    c.classList.toggle('active', c.textContent === D.todayFocus);
+  document.querySelectorAll('.focus-chip').forEach(c=>{
+    c.classList.toggle('active',c.textContent===D.todayFocus);
   });
-  // Start quit time checker
   startQuitChecker();
-  // Splash
-  setTimeout(() => {
-    document.getElementById('splash-fill').style.width = '100%';
-    setTimeout(() => document.getElementById('splash').classList.add('gone'), 1900);
-  }, 100);
+  // SPLASH then auto-open NOW popup
+  setTimeout(()=>{
+    document.getElementById('splash-fill').style.width='100%';
+    setTimeout(()=>{
+      document.getElementById('splash').classList.add('gone');
+      // Auto-open NOW popup after splash
+      setTimeout(()=>openNow(), 400);
+    },1900);
+  },100);
 }
 
 // ═══════════════ NEW DAY ═══════════════
-function checkNewDay() {
-  const today = new Date().toDateString();
-  if (D.lastDate === today) return;
-  if (D.lastDate) {
-    const last = new Date(D.lastDate);
-    const now = new Date();
-    const diff = Math.floor((now - last) / 86400000);
-    if (diff <= 1) { D.streak++; if (D.streak > D.bestStreak) D.bestStreak = D.streak; }
-    else { D.streak = 1; D.streakStart = today; }
-    // Save yesterday's completion
-    const done = D.routine.filter(r => r.done).length;
-    const pct = done / D.routine.length;
-    D.trainingDays[D.lastDate] = { done, total: D.routine.length, karate: D.logs.karate.some(l => l.date === D.lastDate) };
-  } else {
-    D.streak = 1;
-    D.streakStart = today;
-  }
-  D.lastDate = today;
-  D.routine.forEach(r => r.done = false);
-  D.karateDrills.forEach(d => d.done = false);
+function checkNewDay(){
+  const today=new Date().toDateString();
+  if(D.lastDate===today)return;
+  if(D.lastDate){
+    const last=new Date(D.lastDate);
+    const now=new Date();
+    const diff=Math.floor((now-last)/86400000);
+    if(diff<=1){D.streak++;if(D.streak>D.bestStreak)D.bestStreak=D.streak;}
+    else{D.streak=1;D.streakStart=today;}
+    const done=D.routine.filter(r=>r.done).length;
+    D.trainingDays[D.lastDate]={done,total:D.routine.length,karate:D.logs.karate.some(l=>l.date===D.lastDate)};
+  }else{D.streak=1;D.streakStart=today;}
+  D.lastDate=today;
+  D.routine.forEach(r=>r.done=false);
+  D.karateDrills.forEach(d=>d.done=false);
   save();
 }
 
 // ═══════════════ CLOCK ═══════════════
-function startClock() {
-  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  function tick() {
-    const n = new Date();
-    let h = n.getHours();
-    const m = String(n.getMinutes()).padStart(2,'0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    const hStr = String(h).padStart(2,'0');
-    document.getElementById('clock').textContent = hStr + ':' + m;
-    document.getElementById('clock-day').textContent = DAYS[n.getDay()].toUpperCase() + ' · ' + ampm;
-    document.getElementById('clock-date-str').textContent = DAYS[n.getDay()].toUpperCase() + ' · ' + n.getDate() + ' ' + MONTHS[n.getMonth()].toUpperCase() + ' ' + n.getFullYear();
-    document.getElementById('header-date-str') && (document.getElementById('header-date-str').textContent = DAYS[n.getDay()] + ', ' + n.getDate() + ' ' + MONTHS[n.getMonth()]);
+function startClock(){
+  const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function tick(){
+    const n=new Date();
+    let h=n.getHours();
+    const m=String(n.getMinutes()).padStart(2,'0');
+    const ampm=h>=12?'PM':'AM';
+    h=h%12||12;
+    const hStr=String(h).padStart(2,'0');
+    document.getElementById('clock').textContent=hStr+':'+m;
+    document.getElementById('clock-day').textContent=DAYS[n.getDay()].toUpperCase()+' · '+ampm;
+    document.getElementById('clock-date-str').textContent=DAYS[n.getDay()].toUpperCase()+' · '+n.getDate()+' '+MONTHS[n.getMonth()].toUpperCase()+' '+n.getFullYear();
   }
   tick();
-  setInterval(tick, 1000);
+  setInterval(tick,1000);
 }
 
-// ═══════════════ HEADER ═══════════════
-function updateHeader() {
-  document.getElementById('hdr-streak-num').textContent = D.streak;
-}
+function updateHeader(){document.getElementById('hdr-streak-num').textContent=D.streak;}
 
 // ═══════════════ NAVIGATE ═══════════════
-function navigate(v, btn) {
-  if (v === 'stats-modal') { openStatsModal(); return; }
-  document.querySelectorAll('.view').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById('view-' + v);
-  if (el) el.classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  document.getElementById('main').scrollTop = 0;
-  // View-specific renders
-  if (v === 'dash') calcDashboard();
-  if (v === 'cal') renderCalendar();
-  if (v === 'sleep') { renderSleepHistory(); calcRecovery(); }
-  if (v === 'lessons') renderLessons();
+function navigate(v,btn){
+  if(v==='stats-modal'){openStatsModal();return;}
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('view-'+v);
+  if(el)el.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('main').scrollTop=0;
+  if(v==='dash')calcDashboard();
+  if(v==='cal')renderCalendar();
+  if(v==='sleep'){renderSleepHistory();calcRecovery();}
+  if(v==='lessons')renderLessons();
+}
+
+// ═══════════════════════════════════════
+//   NOW POPUP
+// ═══════════════════════════════════════
+function openNow(){
+  renderNowPopup();
+  document.getElementById('now-overlay').classList.add('open');
+}
+
+function closeNow(){
+  document.getElementById('now-overlay').classList.remove('open');
+}
+
+function handleNowOverlayClick(e){
+  if(e.target===document.getElementById('now-overlay'))closeNow();
+}
+
+function getTimeLabel(){
+  const h=new Date().getHours();
+  if(h>=5&&h<12)return'Morning';
+  if(h>=12&&h<17)return'Afternoon';
+  if(h>=17&&h<21)return'Evening';
+  return'Night';
+}
+
+function getGreeting(){
+  const h=new Date().getHours();
+  if(h>=5&&h<12)return'GOOD<br><em>MORNING</em>';
+  if(h>=12&&h<17)return'GOOD<br><em>AFTERNOON</em>';
+  if(h>=17&&h<21)return'GOOD<br><em>EVENING</em>';
+  return'NIGHT<br><em>WARRIOR</em>';
+}
+
+function getNowTime(){
+  const n=new Date();
+  let h=n.getHours(),m=String(n.getMinutes()).padStart(2,'0');
+  const ampm=h>=12?'PM':'AM';
+  h=h%12||12;
+  return h+':'+m+' '+ampm;
+}
+
+function getCoachMsg(){
+  const done=D.routine.filter(r=>r.done).length;
+  const pct=D.routine.length?Math.round(done/D.routine.length*100):0;
+  const nights=D.logs.sleep.filter(s=>s.type==='night');
+  const ls=nights[nights.length-1];
+  if(pct===100)return'Flawless execution today. Focus on recovery tonight.';
+  if(ls&&parseFloat(ls.hrs)<6.5)return`Only ${ls.hrs}h sleep. Reduce high intensity today. Prioritize technique work.`;
+  if(D.streak>=7)return`${D.streak} day streak. Your discipline is separating you from the pack.`;
+  return'Every rep today is an investment in tomorrow\'s warrior. Show up.';
+}
+
+function getRecoveryScore(){
+  const nights=D.logs.sleep.filter(s=>s.type==='night');
+  const last=nights[nights.length-1];
+  if(!last)return{score:'--',color:'var(--muted)',msg:'Log sleep to calculate'};
+  const hrs=parseFloat(last.hrs);
+  if(hrs>=8.5)return{score:98,color:'var(--green)',msg:'Elite recovery. Train at full intensity.'};
+  if(hrs>=7.5)return{score:87,color:'var(--green)',msg:'Good recovery. Full training recommended.'};
+  if(hrs>=7)return{score:74,color:'var(--amber)',msg:'Adequate. Moderate intensity today.'};
+  if(hrs>=6)return{score:55,color:'var(--amber)',msg:'Below optimal. Focus on technique, skip HIIT.'};
+  return{score:32,color:'var(--red)',msg:'Poor recovery. Light training only today.'};
+}
+
+function getSortedRoutine(){
+  return [...D.routine].sort((a,b)=>a.time.localeCompare(b.time));
+}
+
+function getCurrentTask(){
+  const sorted=getSortedRoutine();
+  const nowTime=new Date().toTimeString().slice(0,5);
+  // find first undone task that is at or past current time, or simply first undone
+  const overdue=sorted.filter(r=>!r.done&&r.time<=nowTime);
+  const upcoming=sorted.filter(r=>!r.done&&r.time>nowTime);
+  if(overdue.length)return{task:overdue[overdue.length-1],isOverdue:true};
+  if(upcoming.length)return{task:upcoming[0],isOverdue:false};
+  return null;
+}
+
+function renderNowPopup(){
+  const body=document.getElementById('now-body');
+  const done=D.routine.filter(r=>r.done).length;
+  const total=D.routine.length;
+  const pct=total?Math.round(done/total*100):0;
+  const current=getCurrentTask();
+  const rec=getRecoveryScore();
+  const sorted=getSortedRoutine();
+  const nowTime=new Date().toTimeString().slice(0,5);
+
+  // Progress ring SVG
+  const circ=2*Math.PI*26; // r=26 on 60x60 viewBox
+  const offset=circ*(1-pct/100);
+  const ringColor=pct===100?'var(--green)':pct>50?'var(--amber)':'var(--red)';
+
+  // Build current task block
+  let currentTaskHTML='';
+  if(current){
+    const {task,isOverdue}=current;
+    const tidx=D.routine.indexOf(task);
+    currentTaskHTML=`
+    <div class="now-current-task">
+      <div class="now-ct-tag">${isOverdue?'⚠ OVERDUE — DO THIS NOW':'DO THIS NOW'}</div>
+      <div class="now-ct-title">${task.title}</div>
+      <div class="now-ct-time" style="color:${isOverdue?'var(--amber)':'var(--muted)'}">
+        Scheduled ${task.time} · ${CAT_COLORS[task.cat]?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${CAT_COLORS[task.cat]};margin-right:4px;vertical-align:middle"></span>`:''}<span style="text-transform:capitalize">${task.cat}</span>
+      </div>
+      <div class="now-ct-actions">
+        <button class="now-btn-done" onclick="nowMarkDone(${tidx})">✓ Done</button>
+        <button class="now-btn-skip" onclick="nowSkip(${tidx})">→ Skip</button>
+      </div>
+    </div>`;
+  }else{
+    currentTaskHTML=`<div class="now-current-task" style="text-align:center;padding:24px 20px">
+      <div style="font-size:40px;margin-bottom:8px">🎉</div>
+      <div class="now-ct-title" style="color:var(--green)">All Done Today!</div>
+      <div class="now-ct-time">Outstanding work. Time to recover.</div>
+    </div>`;
+  }
+
+  // Remaining + overdue tasks (up to 5 shown)
+  const remaining=sorted.filter(r=>!r.done).slice(0,6);
+  const taskListHTML=remaining.map((task,i)=>{
+    const tidx=D.routine.indexOf(task);
+    const isOverdue=task.time<=nowTime;
+    const isCurrent=current&&task===current.task;
+    if(isCurrent)return''; // already shown above
+    return`<div class="now-task-row${isOverdue?' overdue':''}" onclick="nowQuickToggle(${tidx})">
+      <div class="now-task-dot" style="background:${CAT_COLORS[task.cat]||'#666'}"></div>
+      <div class="now-task-info">
+        <div class="now-task-title">${task.title}</div>
+        <div class="now-task-time${isOverdue?' overdue-time':''}">${task.time}${isOverdue?' · overdue':''}</div>
+      </div>
+      <div class="now-task-check">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Done tasks (compact, last 3)
+  const doneTasks=sorted.filter(r=>r.done).slice(-3).reverse();
+  const doneHTML=doneTasks.map(task=>{
+    const tidx=D.routine.indexOf(task);
+    return`<div class="now-task-row done-row" onclick="nowQuickToggle(${tidx})" title="Tap to undo">
+      <div class="now-task-dot" style="background:${CAT_COLORS[task.cat]||'#666'};opacity:0.5"></div>
+      <div class="now-task-info">
+        <div class="now-task-title">${task.title}</div>
+        <div class="now-task-time">${task.time}</div>
+      </div>
+      <div class="now-task-check checked">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML=`
+    <!-- GREETING -->
+    <div class="now-header">
+      <div class="now-greeting">${getGreeting()}</div>
+      <div class="now-time-badge" id="now-clock-badge">${getNowTime()}</div>
+    </div>
+    <div class="now-sub">Here's what needs to happen right now.</div>
+
+    <!-- PROGRESS -->
+    <div class="now-progress-row">
+      <div class="now-ring-wrap">
+        <svg viewBox="0 0 60 60">
+          <circle class="now-ring-bg" cx="30" cy="30" r="26"/>
+          <circle class="now-ring-fill" cx="30" cy="30" r="26"
+            stroke="${ringColor}"
+            stroke-dasharray="${circ}"
+            stroke-dashoffset="${offset}"
+            transform="rotate(-90 30 30)"/>
+        </svg>
+        <div class="now-ring-text" style="color:${ringColor}">${pct}%</div>
+      </div>
+      <div class="now-progress-info">
+        <div class="now-progress-title">${done} / ${total} Tasks Done</div>
+        <div class="now-progress-sub">${pct===100?'Full day complete! Outstanding.':pct>=50?`More than halfway there. Keep going.`:`${total-done} task${total-done>1?'s':''} remaining today.`}</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <span class="pill" style="background:var(--redbg);color:var(--red);border:1px solid var(--redbr)">🔥 ${D.streak} day streak</span>
+          <span class="pill" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border)">${BELT_EMOJI[D.belt]||'⬜'} ${D.belt}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CURRENT TASK -->
+    ${currentTaskHTML}
+
+    <!-- UPCOMING -->
+    ${remaining.filter(t=>!current||t!==current.task).length>0?`
+    <div class="now-section-label">Up Next</div>
+    ${taskListHTML}`:''}
+
+    <!-- COMPLETED (if any) -->
+    ${doneTasks.length>0?`
+    <div class="now-section-label">Completed</div>
+    ${doneHTML}`:''}
+
+    <!-- QUICK ACTIONS -->
+    <div class="now-section-label">Quick Actions</div>
+    <div class="now-quick-grid">
+      <div class="now-quick-btn" onclick="closeNow();navigate('timer',null)">
+        <div class="now-quick-icon">⏱️</div>
+        <div>
+          <div class="now-quick-label">Start Timer</div>
+          <div class="now-quick-sub">Interval rounds</div>
+        </div>
+      </div>
+      <div class="now-quick-btn" onclick="closeNow();navigate('workout',null)">
+        <div class="now-quick-icon">🥋</div>
+        <div>
+          <div class="now-quick-label">Log Training</div>
+          <div class="now-quick-sub">Karate / Strength</div>
+        </div>
+      </div>
+      <div class="now-quick-btn" onclick="closeNow();navigate('sleep',null)">
+        <div class="now-quick-icon">💤</div>
+        <div>
+          <div class="now-quick-label">Log Sleep</div>
+          <div class="now-quick-sub">Recovery score</div>
+        </div>
+      </div>
+      <div class="now-quick-btn" onclick="closeNow();navigate('routine',null)">
+        <div class="now-quick-icon">📋</div>
+        <div>
+          <div class="now-quick-label">Full Schedule</div>
+          <div class="now-quick-sub">View all tasks</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECOVERY -->
+    <div class="now-section-label">Recovery Status</div>
+    <div class="now-recovery-block">
+      <div class="now-rec-score" style="color:${rec.color}">${rec.score}</div>
+      <div class="now-rec-info">
+        <div class="now-rec-title">Recovery Score</div>
+        <div class="now-rec-msg">${rec.msg}</div>
+      </div>
+    </div>
+
+    <!-- AI COACH -->
+    <div class="now-section-label">Coach Insight</div>
+    <div class="now-coach-block">
+      <div class="now-coach-tag">🤖 DBP AI Coach</div>
+      <div class="now-coach-msg">${getCoachMsg()}</div>
+    </div>
+  `;
+
+  // Live clock tick in popup
+  startNowClock();
+}
+
+let nowClockInt=null;
+function startNowClock(){
+  clearInterval(nowClockInt);
+  nowClockInt=setInterval(()=>{
+    const el=document.getElementById('now-clock-badge');
+    if(el)el.textContent=getNowTime();
+    else clearInterval(nowClockInt);
+  },10000);
+}
+
+// Mark done from NOW popup
+function nowMarkDone(i){
+  D.routine[i].done=true;
+  D.trainingDays[new Date().toDateString()]={
+    done:D.routine.filter(r=>r.done).length,
+    total:D.routine.length,
+    karate:D.logs.karate.some(l=>l.date===new Date().toDateString())
+  };
+  save();
+  renderRoutine();
+  calcDashboard();
+  toast('✓ Task complete!');
+  renderNowPopup(); // refresh popup
+}
+
+function nowSkip(i){
+  // Skipping moves task to skipped (just mark done for now with soft toast)
+  D.routine[i].done=true;
+  save();
+  renderRoutine();
+  calcDashboard();
+  toast('Skipped — moving on', 'info');
+  renderNowPopup();
+}
+
+function nowQuickToggle(i){
+  D.routine[i].done=!D.routine[i].done;
+  D.trainingDays[new Date().toDateString()]={
+    done:D.routine.filter(r=>r.done).length,
+    total:D.routine.length,
+    karate:D.logs.karate.some(l=>l.date===new Date().toDateString())
+  };
+  save();
+  renderRoutine();
+  calcDashboard();
+  if(D.routine[i].done)toast('✓ Done!');
+  renderNowPopup();
 }
 
 // ═══════════════ DASHBOARD ═══════════════
-function calcDashboard() {
-  const done = D.routine.filter(r => r.done).length;
-  const pct = D.routine.length ? Math.round(done / D.routine.length * 100) : 0;
-  document.getElementById('ds-done').textContent = pct + '%';
-  document.getElementById('ds-streak').textContent = D.streak;
-  // Sleep
-  const nights = D.logs.sleep.filter(s => s.type === 'night');
-  const ls = nights[nights.length - 1];
-  document.getElementById('ds-sleep').textContent = ls ? parseFloat(ls.hrs).toFixed(1) : '--';
-  // Belt
-  document.getElementById('ds-belt').textContent = BELT_EMOJI[D.belt] || '⬜';
-  document.getElementById('ds-belt-lbl').textContent = D.belt;
-  // Up next
-  const next = D.routine.find(r => !r.done);
-  const nutEl = document.getElementById('upnext-title');
-  const nusEl = document.getElementById('upnext-time');
-  if (next) {
-    nutEl.textContent = next.title;
-    nusEl.textContent = next.time + ' — tap Schedule to mark done';
-    document.getElementById('upnext-card').style.opacity = '1';
-  } else {
-    nutEl.textContent = '🎉 All tasks done today!';
-    nutEl.style.color = 'var(--green)';
-    nusEl.textContent = 'Outstanding. Rest and recover.';
-  }
-  // Coach
-  let msg = '';
-  if (pct === 100) msg = 'Flawless execution today. Focus on recovery tonight — that\'s when your body actually grows stronger.';
-  else if (ls && parseFloat(ls.hrs) < 6.5) msg = `Sleep was only ${ls.hrs}h last night. Muscle repair needs 7–9h. Consider a nap and prioritize bed by ${D.bedTime}.`;
-  else if (D.streak >= 20) msg = `${D.streak} consecutive days of training. You\'re building the habits that define martial artists. Your consistency is compounding.`;
-  else if (D.streak >= 7) msg = `${D.streak} day streak — remarkable. A new habit is fully forming. Your discipline is separating you from the pack.`;
-  else if (D.streak >= 3) msg = `${D.streak} days consistent. Momentum is building. Show up again today and tomorrow it gets easier.`;
-  else msg = 'Every champion started at day 1. Build your routine, build your streak. Your future self is watching.';
-  document.getElementById('coach-text').textContent = msg;
-  // Focus
-  document.getElementById('dash-focus-pills').innerHTML = `<span class="pill pill-red">${D.todayFocus}</span>`;
-  // Achievements
+function calcDashboard(){
+  const done=D.routine.filter(r=>r.done).length;
+  const pct=D.routine.length?Math.round(done/D.routine.length*100):0;
+  document.getElementById('ds-done').textContent=pct+'%';
+  document.getElementById('ds-streak').textContent=D.streak;
+  const nights=D.logs.sleep.filter(s=>s.type==='night');
+  const ls=nights[nights.length-1];
+  document.getElementById('ds-sleep').textContent=ls?parseFloat(ls.hrs).toFixed(1):'--';
+  document.getElementById('ds-belt').textContent=BELT_EMOJI[D.belt]||'⬜';
+  document.getElementById('ds-belt-lbl').textContent=D.belt;
+  const next=D.routine.find(r=>!r.done);
+  const nutEl=document.getElementById('upnext-title');
+  const nusEl=document.getElementById('upnext-time');
+  if(next){nutEl.textContent=next.title;nutEl.style.color='';nusEl.textContent=next.time+' — tap ⚡ NOW for details';}
+  else{nutEl.textContent='🎉 All tasks done today!';nutEl.style.color='var(--green)';nusEl.textContent='Outstanding. Rest and recover.';}
+  let msg='';
+  if(pct===100)msg='Flawless execution today. Focus on recovery tonight.';
+  else if(ls&&parseFloat(ls.hrs)<6.5)msg=`Sleep was only ${ls.hrs}h last night. Prioritize recovery and reduce intensity.`;
+  else if(D.streak>=7)msg=`${D.streak} day streak. Your discipline is compounding.`;
+  else if(D.streak>=3)msg=`${D.streak} days consistent. Momentum is building.`;
+  else msg='Every champion started at day 1. Build your routine, build your streak.';
+  document.getElementById('coach-text').textContent=msg;
+  document.getElementById('dash-focus-pills').innerHTML=`<span class="pill pill-red">${D.todayFocus}</span>`;
   renderDashAchievements();
   updateHeader();
 }
 
-function renderDashAchievements() {
-  const el = document.getElementById('dash-achievements');
-  const unlocked = ACHIEVEMENTS.filter(a => a.unlock(D)).slice(0,3);
-  if (!unlocked.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted)">Complete tasks to unlock achievements</div>'; return; }
-  el.innerHTML = unlocked.map(a => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+function renderDashAchievements(){
+  const el=document.getElementById('dash-achievements');
+  const unlocked=ACHIEVEMENTS.filter(a=>a.unlock(D)).slice(0,3);
+  if(!unlocked.length){el.innerHTML='<div style="font-size:12px;color:var(--muted)">Complete tasks to unlock achievements</div>';return;}
+  el.innerHTML=unlocked.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
     <span style="font-size:20px">${a.icon}</span>
     <div><div style="font-size:13px;font-weight:700;font-family:var(--font-d);letter-spacing:0.5px">${a.name}</div><div style="font-size:11px;color:var(--muted)">${a.desc}</div></div>
     <span class="pill pill-amber" style="margin-left:auto">✓</span>
   </div>`).join('');
 }
 
-function pickQuote() {
-  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-  document.getElementById('quote-text').textContent = '"' + q[0] + '"';
-  document.getElementById('quote-attr').textContent = '— ' + q[1];
+function pickQuote(){
+  const q=QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  document.getElementById('quote-text').textContent='"'+q[0]+'"';
+  document.getElementById('quote-attr').textContent='— '+q[1];
 }
 
 // ═══════════════ CALENDAR ═══════════════
-let calViewYear = new Date().getFullYear();
-let calViewMonth = new Date().getMonth();
-let calSelectedDate = null;
+let calViewYear=new Date().getFullYear();
+let calViewMonth=new Date().getMonth();
+let calSelectedDate=null;
 
-function renderCalendar() {
-  const now = new Date();
-  const todayStr = now.toDateString();
-  const year = calViewYear, month = calViewMonth;
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-title').textContent = MONTHS[month] + ' ' + year;
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const DOWS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-  let html = DOWS.map(d => `<div class="cal-dow">${d}</div>`).join('');
-  // Empty cells
-  for (let i=0; i<firstDay; i++) html += `<div class="cal-day empty"></div>`;
-  for (let d=1; d<=daysInMonth; d++) {
-    const date = new Date(year, month, d);
-    const dateStr = date.toDateString();
-    const isToday = dateStr === todayStr;
-    const td = D.trainingDays[dateStr];
-    const isTodayPartial = isToday && D.routine.filter(r=>r.done).length > 0;
-    const isTodayDone = isToday && D.routine.every(r=>r.done);
-    let cls = 'cal-day';
-    if (td) {
-      const pct = td.done / td.total;
-      if (pct >= 0.8) cls += ' done';
-      else if (pct >= 0.3) cls += ' partial';
-    } else if (isTodayDone) cls += ' done';
-    else if (isTodayPartial) cls += ' partial';
-    if (isToday) cls += ' today';
-    if (calSelectedDate === dateStr) cls += ' selected';
-    html += `<div class="${cls}" onclick="selectCalDay('${dateStr}',${d})">${d}</div>`;
+function renderCalendar(){
+  const now=new Date();
+  const todayStr=now.toDateString();
+  const year=calViewYear,month=calViewMonth;
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-title').textContent=MONTHS[month]+' '+year;
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const DOWS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let html=DOWS.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++)html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const date=new Date(year,month,d);
+    const dateStr=date.toDateString();
+    const isToday=dateStr===todayStr;
+    const td=D.trainingDays[dateStr];
+    const isTodayDone=isToday&&D.routine.every(r=>r.done);
+    const isTodayPartial=isToday&&D.routine.filter(r=>r.done).length>0;
+    let cls='cal-day';
+    if(td){const pct=td.done/td.total;if(pct>=0.8)cls+=' done';else if(pct>=0.3)cls+=' partial';}
+    else if(isTodayDone)cls+=' done';
+    else if(isTodayPartial)cls+=' partial';
+    if(isToday)cls+=' today';
+    if(calSelectedDate===dateStr)cls+=' selected';
+    html+=`<div class="${cls}" onclick="selectCalDay('${dateStr}',${d})">${d}</div>`;
   }
-  document.getElementById('cal-grid').innerHTML = html;
-  // Update streak display
-  document.getElementById('cal-streak-big').textContent = D.streak;
-  document.getElementById('cal-best-streak').textContent = D.bestStreak || D.streak;
-  document.getElementById('cal-streak-start').textContent = D.streakStart ? new Date(D.streakStart).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '--';
+  document.getElementById('cal-grid').innerHTML=html;
+  document.getElementById('cal-streak-big').textContent=D.streak;
+  document.getElementById('cal-best-streak').textContent=D.bestStreak||D.streak;
+  document.getElementById('cal-streak-start').textContent=D.streakStart?new Date(D.streakStart).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'--';
   renderWeekStrip('week-strip');
-  renderCalDayDetail(calSelectedDate || todayStr);
+  renderCalDayDetail(calSelectedDate||todayStr);
 }
 
-function calNav(dir) {
-  calViewMonth += dir;
-  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
-  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+function calNav(dir){
+  calViewMonth+=dir;
+  if(calViewMonth<0){calViewMonth=11;calViewYear--;}
+  if(calViewMonth>11){calViewMonth=0;calViewYear++;}
   renderCalendar();
 }
 
-function selectCalDay(dateStr, d) {
-  calSelectedDate = dateStr;
-  renderCalendar();
-}
+function selectCalDay(dateStr,d){calSelectedDate=dateStr;renderCalendar();}
 
-function renderCalDayDetail(dateStr) {
-  const el = document.getElementById('cal-day-detail');
-  const dLabel = document.getElementById('cal-selected-date');
-  const now = new Date().toDateString();
-  if (dateStr === now) dLabel.textContent = 'Today';
-  else dLabel.textContent = new Date(dateStr).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-  const td = D.trainingDays[dateStr];
-  const isToday = dateStr === now;
-  if (isToday) {
-    const done = D.routine.filter(r=>r.done).length;
-    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+function renderCalDayDetail(dateStr){
+  const el=document.getElementById('cal-day-detail');
+  const dLabel=document.getElementById('cal-selected-date');
+  const now=new Date().toDateString();
+  if(dateStr===now)dLabel.textContent='Today';
+  else dLabel.textContent=new Date(dateStr).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+  const td=D.trainingDays[dateStr];
+  const isToday=dateStr===now;
+  if(isToday){
+    const done=D.routine.filter(r=>r.done).length;
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <span style="font-size:14px;font-weight:600;font-family:var(--font-d)">Tasks: ${done} / ${D.routine.length}</span>
       <span class="pill ${done===D.routine.length?'pill-green':'pill-amber'}">${Math.round(done/D.routine.length*100)}%</span>
     </div>
     <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${Math.round(done/D.routine.length*100)}%"></div></div>`;
-  } else if (td) {
-    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  }else if(td){
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <span style="font-size:14px;font-weight:600;font-family:var(--font-d)">Tasks: ${td.done} / ${td.total}</span>
       <span class="pill ${td.done>=td.total*0.8?'pill-green':'pill-amber'}">${Math.round(td.done/td.total*100)}%</span>
     </div>
     ${td.karate?'<span class="pill pill-red" style="margin-top:4px">Karate Day 🥋</span>':''}`;
-  } else {
-    el.innerHTML = '<div style="font-size:13px;color:var(--muted)">No data recorded for this day</div>';
+  }else{
+    el.innerHTML='<div style="font-size:13px;color:var(--muted)">No data recorded for this day</div>';
   }
 }
 
-function renderWeekStrip(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  const LABELS = ['M','T','W','T','F','S','S'];
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sun
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  let html = '';
-  for (let i=0; i<7; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() + mondayOffset + i);
-    const dStr = d.toDateString();
-    const isToday = dStr === now.toDateString();
-    const isFuture = d > now;
-    const td = D.trainingDays[dStr];
-    const isTodayDone = isToday && D.routine.every(r=>r.done);
-    let cls = 'miss';
-    if (isFuture) cls = 'future';
-    else if (td && td.done >= td.total * 0.8) cls = 'done';
-    else if (isTodayDone) cls = 'done';
-    else if (isToday) cls = 'today';
-    html += `<div class="week-dot">
+function renderWeekStrip(containerId){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  const LABELS=['M','T','W','T','F','S','S'];
+  const now=new Date();
+  const dayOfWeek=now.getDay();
+  const mondayOffset=dayOfWeek===0?-6:1-dayOfWeek;
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(now);
+    d.setDate(now.getDate()+mondayOffset+i);
+    const dStr=d.toDateString();
+    const isToday=dStr===now.toDateString();
+    const isFuture=d>now;
+    const td=D.trainingDays[dStr];
+    const isTodayDone=isToday&&D.routine.every(r=>r.done);
+    let cls='miss';
+    if(isFuture)cls='future';
+    else if(td&&td.done>=td.total*0.8)cls='done';
+    else if(isTodayDone)cls='done';
+    else if(isToday)cls='today';
+    html+=`<div class="week-dot">
       <div class="week-dot-circle ${cls}">${LABELS[i]}</div>
       <div class="week-dot-label">${d.getDate()}</div>
     </div>`;
   }
-  el.innerHTML = html;
+  el.innerHTML=html;
 }
 
 // ═══════════════ ROUTINE ═══════════════
-const CAT_COLORS = {
-  morning:'#ffab00', school:'#448aff', recovery:'#00e676',
-  karate:'#ff1744', strength:'#e040fb', grip:'#00e5ff',
-  cali:'#ff6d00', evening:'#7986cb', sleep:'#5c6bc0'
-};
-
-function renderRoutine() {
-  const el = document.getElementById('routine-list');
-  const sorted = [...D.routine].sort((a,b) => a.time.localeCompare(b.time));
-  const nowTime = new Date().toTimeString().slice(0,5);
-  // Find current block
-  let currentIdx = -1;
-  for (let i=0; i<sorted.length; i++) {
-    if (!sorted[i].done && sorted[i].time <= nowTime) currentIdx = i;
+function renderRoutine(){
+  const el=document.getElementById('routine-list');
+  const sorted=[...D.routine].sort((a,b)=>a.time.localeCompare(b.time));
+  const nowTime=new Date().toTimeString().slice(0,5);
+  let currentIdx=-1;
+  for(let i=0;i<sorted.length;i++){
+    if(!sorted[i].done&&sorted[i].time<=nowTime)currentIdx=i;
   }
-  el.innerHTML = sorted.map((item, i) => {
-    const isCurrent = !item.done && i === currentIdx + 1;
-    return `<div class="tl-item${item.done?' done':''}${isCurrent?' current':''}" onclick="toggleRoutine(${D.routine.indexOf(item)})">
+  el.innerHTML=sorted.map((item,i)=>{
+    const isCurrent=!item.done&&i===currentIdx+1;
+    return`<div class="tl-item${item.done?' done':''}${isCurrent?' current':''}" onclick="toggleRoutine(${D.routine.indexOf(item)})">
       <div class="tl-left">
         <div class="tl-time">${item.time}</div>
         <div class="tl-line-wrap">
@@ -1614,32 +2221,27 @@ function renderRoutine() {
       </div>
     </div>`;
   }).join('');
-  const done = D.routine.filter(r=>r.done).length;
-  const pct = D.routine.length ? Math.round(done/D.routine.length*100) : 0;
-  document.getElementById('prog-bar-fill').style.width = pct + '%';
+  const done=D.routine.filter(r=>r.done).length;
+  const pct=D.routine.length?Math.round(done/D.routine.length*100):0;
+  document.getElementById('prog-bar-fill').style.width=pct+'%';
 }
 
-function toggleRoutine(i) {
-  D.routine[i].done = !D.routine[i].done;
-  // Save today's training day data
-  const done = D.routine.filter(r=>r.done).length;
-  D.trainingDays[new Date().toDateString()] = {
-    done, total: D.routine.length,
-    karate: D.logs.karate.some(l=>l.date===new Date().toDateString())
-  };
-  save(); renderRoutine(); calcDashboard();
-  if (D.routine[i].done) toast('✓ Task complete!');
+function toggleRoutine(i){
+  D.routine[i].done=!D.routine[i].done;
+  D.trainingDays[new Date().toDateString()]={done:D.routine.filter(r=>r.done).length,total:D.routine.length,karate:D.logs.karate.some(l=>l.date===new Date().toDateString())};
+  save();renderRoutine();calcDashboard();
+  if(D.routine[i].done)toast('✓ Task complete!');
 }
 
-function resetRoutine() {
-  if (!confirm('Reset today\'s tasks?')) return;
-  D.routine.forEach(r => r.done = false);
-  save(); renderRoutine(); calcDashboard(); toast('Routine reset');
+function resetRoutine(){
+  if(!confirm('Reset today\'s tasks?'))return;
+  D.routine.forEach(r=>r.done=false);
+  save();renderRoutine();calcDashboard();toast('Routine reset');
 }
 
-function openEditSchedule() {
-  const m = document.getElementById('edit-modal-body');
-  m.innerHTML = D.routine.map((item, i) => `
+function openEditSchedule(){
+  const m=document.getElementById('edit-modal-body');
+  m.innerHTML=D.routine.map((item,i)=>`
     <div class="edit-block">
       <div class="edit-block-num">Block ${i+1}</div>
       <div class="edit-row">
@@ -1658,33 +2260,30 @@ function openEditSchedule() {
   document.getElementById('edit-modal').classList.add('open');
 }
 
-function addRoutineBlock() {
-  const maxId = D.routine.reduce((m,r)=>Math.max(m,r.id),0);
+function addRoutineBlock(){
+  const maxId=D.routine.reduce((m,r)=>Math.max(m,r.id),0);
   D.routine.push({id:maxId+1,time:'12:00',title:'New Block',cat:'morning',done:false});
   openEditSchedule();
 }
 
-function removeBlock(i) {
-  D.routine.splice(i,1);
-  openEditSchedule();
-}
+function removeBlock(i){D.routine.splice(i,1);openEditSchedule();}
 
-function saveEditedSchedule() {
-  save(); renderRoutine();
+function saveEditedSchedule(){
+  save();renderRoutine();
   document.getElementById('edit-modal').classList.remove('open');
   toast('Schedule saved!');
 }
 
-function closeModal(e, id) {
-  if (e.target.id === id) document.getElementById(id).classList.remove('open');
+function closeModal(e,id){
+  if(e.target.id===id)document.getElementById(id).classList.remove('open');
 }
 
 // ═══════════════ KARATE ═══════════════
-function renderKarateDrills() {
-  const el = document.getElementById('karate-drills');
-  el.innerHTML = D.karateDrills.map((d,i) => {
-    const catClass = {Kumite:'pill-red',Kihon:'pill-amber',Blocking:'pill-blue',Kicks:'pill-purple',Kata:'pill-cyan'}[d.cat]||'pill-dim';
-    return `<div class="drill-row${d.done?' done':''}" onclick="toggleDrill(${i})">
+function renderKarateDrills(){
+  const el=document.getElementById('karate-drills');
+  el.innerHTML=D.karateDrills.map((d,i)=>{
+    const catClass={Kumite:'pill-red',Kihon:'pill-amber',Blocking:'pill-blue',Kicks:'pill-purple',Kata:'pill-cyan'}[d.cat]||'pill-dim';
+    return`<div class="drill-row${d.done?' done':''}" onclick="toggleDrill(${i})">
       <div class="check-ring" style="flex-shrink:0;margin-right:0">
         <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       </div>
@@ -1697,36 +2296,30 @@ function renderKarateDrills() {
   }).join('');
 }
 
-function toggleDrill(i) {
-  D.karateDrills[i].done = !D.karateDrills[i].done;
-  save(); renderKarateDrills();
-}
+function toggleDrill(i){D.karateDrills[i].done=!D.karateDrills[i].done;save();renderKarateDrills();}
 
-function setFocus(el, focus) {
-  document.querySelectorAll('.focus-chip').forEach(c => c.classList.remove('active'));
+function setFocus(el,focus){
+  document.querySelectorAll('.focus-chip').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
-  D.todayFocus = focus; save();
-  document.getElementById('dash-focus-pills').innerHTML = `<span class="pill pill-red">${focus}</span>`;
+  D.todayFocus=focus;save();
+  document.getElementById('dash-focus-pills').innerHTML=`<span class="pill pill-red">${focus}</span>`;
 }
 
-function saveKarateNote() {
-  const note = document.getElementById('karate-note').value.trim();
-  if (!note) { toast('Write something first', 'error'); return; }
-  D.logs.karate.push({ date: new Date().toDateString(), focus: D.todayFocus, note, time: new Date().toLocaleTimeString() });
-  // Update training day
-  D.trainingDays[new Date().toDateString()] = {
-    done: D.routine.filter(r=>r.done).length, total: D.routine.length, karate: true
-  };
-  save(); document.getElementById('karate-note').value = '';
-  renderKarateNotesLog(); toast('Session logged!');
+function saveKarateNote(){
+  const note=document.getElementById('karate-note').value.trim();
+  if(!note){toast('Write something first','error');return;}
+  D.logs.karate.push({date:new Date().toDateString(),focus:D.todayFocus,note,time:new Date().toLocaleTimeString()});
+  D.trainingDays[new Date().toDateString()]={done:D.routine.filter(r=>r.done).length,total:D.routine.length,karate:true};
+  save();document.getElementById('karate-note').value='';
+  renderKarateNotesLog();toast('Session logged!');
 }
 
-function renderKarateNotesLog() {
-  const el = document.getElementById('karate-notes-log');
-  const today = D.logs.karate.filter(l => l.date === new Date().toDateString());
-  if (!today.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="card-title" style="margin:12px 0 8px">Today\'s Notes</div>' +
-    today.slice().reverse().map(l => `<div class="notes-log-item">
+function renderKarateNotesLog(){
+  const el=document.getElementById('karate-notes-log');
+  const today=D.logs.karate.filter(l=>l.date===new Date().toDateString());
+  if(!today.length){el.innerHTML='';return;}
+  el.innerHTML='<div class="card-title" style="margin:12px 0 8px">Today\'s Notes</div>'+
+    today.slice().reverse().map(l=>`<div class="notes-log-item">
       <div class="notes-focus-tag">${l.focus}</div>
       <div class="notes-text">${l.note}</div>
       <div class="notes-date">${l.time}</div>
@@ -1734,116 +2327,115 @@ function renderKarateNotesLog() {
 }
 
 // ═══════════════ STRENGTH ═══════════════
-function addStrLog() {
-  const name = document.getElementById('str-ex').value;
-  const sets = document.getElementById('str-sets').value;
-  const reps = document.getElementById('str-reps').value;
-  const weight = document.getElementById('str-weight').value;
-  if (!name || !sets || !reps) { toast('Fill exercise, sets, and reps', 'error'); return; }
-  D.logs.strength.push({ date: new Date().toDateString(), name, sets, reps, weight: weight||'BW' });
-  save(); renderStrLog(); toast('Strength logged!');
+function addStrLog(){
+  const name=document.getElementById('str-ex').value;
+  const sets=document.getElementById('str-sets').value;
+  const reps=document.getElementById('str-reps').value;
+  const weight=document.getElementById('str-weight').value;
+  if(!name||!sets||!reps){toast('Fill exercise, sets, and reps','error');return;}
+  D.logs.strength.push({date:new Date().toDateString(),name,sets,reps,weight:weight||'BW'});
+  save();renderStrLog();toast('Strength logged!');
   document.getElementById('str-ex').value='';
   document.getElementById('str-sets').value='';
   document.getElementById('str-reps').value='';
   document.getElementById('str-weight').value='';
 }
 
-function renderStrLog() {
-  const el = document.getElementById('str-log-display');
-  const today = D.logs.strength.filter(l => l.date === new Date().toDateString());
-  if (!today.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No exercises logged yet</div></div>'; return; }
-  el.innerHTML = today.map(l => `<div class="log-entry"><div><div class="log-name">${l.name}</div><div class="log-detail">${l.sets}×${l.reps} @ ${l.weight}kg</div></div></div>`).join('');
+function renderStrLog(){
+  const el=document.getElementById('str-log-display');
+  const today=D.logs.strength.filter(l=>l.date===new Date().toDateString());
+  if(!today.length){el.innerHTML='<div class="empty-state"><div class="empty-text">No exercises logged yet</div></div>';return;}
+  el.innerHTML=today.map(l=>`<div class="log-entry"><div><div class="log-name">${l.name}</div><div class="log-detail">${l.sets}×${l.reps} @ ${l.weight}kg</div></div></div>`).join('');
 }
 
 // ═══════════════ GRIP ═══════════════
-function addGripLog() {
-  const reps = document.getElementById('grip-reps').value;
-  const hold = document.getElementById('grip-hold').value;
-  const sets = document.getElementById('grip-sets').value;
-  if (!reps) { toast('Enter reps', 'error'); return; }
-  D.logs.grip.push({ date: new Date().toDateString(), type: 'Hand Gripper', detail: `${sets||1}×${reps} reps${hold?', '+hold+'s hold':''}` });
-  save(); renderGripLog(); toast('Grip logged!');
-  ['grip-reps','grip-hold','grip-sets'].forEach(id => document.getElementById(id).value='');
+function addGripLog(){
+  const reps=document.getElementById('grip-reps').value;
+  const hold=document.getElementById('grip-hold').value;
+  const sets=document.getElementById('grip-sets').value;
+  if(!reps){toast('Enter reps','error');return;}
+  D.logs.grip.push({date:new Date().toDateString(),type:'Hand Gripper',detail:`${sets||1}×${reps} reps${hold?', '+hold+'s hold':''}`});
+  save();renderGripLog();toast('Grip logged!');
+  ['grip-reps','grip-hold','grip-sets'].forEach(id=>document.getElementById(id).value='');
 }
 
-function addArmLog() {
-  const name = document.getElementById('arm-ex').value;
-  const sets = document.getElementById('arm-sets').value;
-  const reps = document.getElementById('arm-reps').value;
-  if (!name || !reps) { toast('Select exercise and reps', 'error'); return; }
-  D.logs.grip.push({ date: new Date().toDateString(), type: name, detail: `${sets||1}×${reps}` });
-  save(); renderGripLog(); toast('Arm set logged!');
+function addArmLog(){
+  const name=document.getElementById('arm-ex').value;
+  const sets=document.getElementById('arm-sets').value;
+  const reps=document.getElementById('arm-reps').value;
+  if(!name||!reps){toast('Select exercise and reps','error');return;}
+  D.logs.grip.push({date:new Date().toDateString(),type:name,detail:`${sets||1}×${reps}`});
+  save();renderGripLog();toast('Arm set logged!');
   document.getElementById('arm-ex').value='';
   document.getElementById('arm-sets').value='';
   document.getElementById('arm-reps').value='';
 }
 
-function renderGripLog() {
-  const el = document.getElementById('grip-log-display');
-  const today = D.logs.grip.filter(l => l.date === new Date().toDateString());
-  if (!today.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No grip sessions yet</div></div>'; return; }
-  el.innerHTML = today.map(l => `<div class="log-entry"><div><div class="log-name">${l.type}</div><div class="log-detail">${l.detail}</div></div></div>`).join('');
+function renderGripLog(){
+  const el=document.getElementById('grip-log-display');
+  const today=D.logs.grip.filter(l=>l.date===new Date().toDateString());
+  if(!today.length){el.innerHTML='<div class="empty-state"><div class="empty-text">No grip sessions yet</div></div>';return;}
+  el.innerHTML=today.map(l=>`<div class="log-entry"><div><div class="log-name">${l.type}</div><div class="log-detail">${l.detail}</div></div></div>`).join('');
 }
 
 // ═══════════════ PLANCHE ═══════════════
-function setPlancheLevel(el, level) {
-  document.querySelectorAll('.phase-item').forEach(p => p.classList.remove('active-phase'));
+function setPlancheLevel(el,level){
+  document.querySelectorAll('.phase-item').forEach(p=>p.classList.remove('active-phase'));
   el.classList.add('active-phase');
-  D.plancheLevel = level; save(); renderPlancheProgram();
+  D.plancheLevel=level;save();renderPlancheProgram();
 }
 
-function renderPlancheProgram() {
-  const prog = PLANCHE_PROGRAMS[D.plancheLevel || 0];
-  document.getElementById('planche-program').innerHTML =
-    `<div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-d);margin-bottom:12px">${prog.level}</div>` +
-    prog.exercises.map(ex => `<div class="ex-block" style="border-color:rgba(224,64,251,0.15)">
+function renderPlancheProgram(){
+  const prog=PLANCHE_PROGRAMS[D.plancheLevel||0];
+  document.getElementById('planche-program').innerHTML=
+    `<div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-d);margin-bottom:12px">${prog.level}</div>`+
+    prog.exercises.map(ex=>`<div class="ex-block" style="border-color:rgba(224,64,251,0.15)">
       <div class="ex-title">${ex.name}</div>
       <div class="ex-sets" style="color:var(--purple)">${ex.sets}</div>
       <div class="ex-note">${ex.note}</div>
     </div>`).join('');
 }
 
-function addCaliLog() {
-  const ex = document.getElementById('cali-ex').value;
-  const sets = document.getElementById('cali-sets').value;
-  const reps = document.getElementById('cali-reps').value;
-  if (!ex || !reps) { toast('Select exercise and enter reps', 'error'); return; }
-  D.logs.cali.push({ date: new Date().toDateString(), ex, sets: sets||1, reps });
-  save(); renderCaliLog(); toast('Calisthenics logged!');
+function addCaliLog(){
+  const ex=document.getElementById('cali-ex').value;
+  const sets=document.getElementById('cali-sets').value;
+  const reps=document.getElementById('cali-reps').value;
+  if(!ex||!reps){toast('Select exercise and enter reps','error');return;}
+  D.logs.cali.push({date:new Date().toDateString(),ex,sets:sets||1,reps});
+  save();renderCaliLog();toast('Calisthenics logged!');
   document.getElementById('cali-ex').value='';
   document.getElementById('cali-sets').value='';
   document.getElementById('cali-reps').value='';
 }
 
-function renderCaliLog() {
-  const el = document.getElementById('cali-log-display');
-  const today = D.logs.cali.filter(l => l.date === new Date().toDateString());
-  if (!today.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No calisthenics logged yet</div></div>'; return; }
-  el.innerHTML = today.map(l => `<div class="log-entry"><div><div class="log-name">${l.ex}</div><div class="log-detail">${l.sets}×${l.reps}</div></div></div>`).join('');
+function renderCaliLog(){
+  const el=document.getElementById('cali-log-display');
+  const today=D.logs.cali.filter(l=>l.date===new Date().toDateString());
+  if(!today.length){el.innerHTML='<div class="empty-state"><div class="empty-text">No calisthenics logged yet</div></div>';return;}
+  el.innerHTML=today.map(l=>`<div class="log-entry"><div><div class="log-name">${l.ex}</div><div class="log-detail">${l.sets}×${l.reps}</div></div></div>`).join('');
 }
 
 // ═══════════════ LESSONS ═══════════════
-let currentLessonTab = 'fundamentals';
+let currentLessonTab='fundamentals';
 
-function switchWorkoutTab(btn, tab) {
-  document.querySelectorAll('#view-workout .tab-btn').forEach(b => b.classList.remove('active'));
+function switchWorkoutTab(btn,tab){
+  document.querySelectorAll('#view-workout .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['karate','strength','grip','cali'].forEach(t => document.getElementById('tp-'+t).classList.remove('active'));
+  ['karate','strength','grip','cali'].forEach(t=>document.getElementById('tp-'+t).classList.remove('active'));
   document.getElementById('tp-'+tab).classList.add('active');
 }
 
-function switchLessonTab(btn, tab) {
-  document.querySelectorAll('#view-lessons .tab-btn').forEach(b => b.classList.remove('active'));
+function switchLessonTab(btn,tab){
+  document.querySelectorAll('#view-lessons .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  currentLessonTab = tab;
-  renderLessons(tab);
+  currentLessonTab=tab;renderLessons(tab);
 }
 
-function renderLessons(tab) {
-  tab = tab || currentLessonTab || 'fundamentals';
-  currentLessonTab = tab;
-  const data = LESSONS[tab] || LESSONS.fundamentals;
-  document.getElementById('lessons-container').innerHTML = data.map((lesson, li) => `
+function renderLessons(tab){
+  tab=tab||currentLessonTab||'fundamentals';
+  currentLessonTab=tab;
+  const data=LESSONS[tab]||LESSONS.fundamentals;
+  document.getElementById('lessons-container').innerHTML=data.map((lesson,li)=>`
     <div class="lesson-card" onclick="toggleLesson(this)">
       <div class="lesson-header">
         <div style="flex:1">
@@ -1856,88 +2448,82 @@ function renderLessons(tab) {
         <div class="chev">›</div>
       </div>
       <div class="lesson-body">
-        ${lesson.steps.map(s => `<div class="lesson-step">
+        ${lesson.steps.map(s=>`<div class="lesson-step">
           <div class="step-num">${s.num}</div>
           <div class="step-text">${s.text}</div>
-          ${s.tip ? `<div class="step-tip">💡 ${s.tip}</div>` : ''}
+          ${s.tip?`<div class="step-tip">💡 ${s.tip}</div>`:''}
         </div>`).join('')}
       </div>
     </div>`).join('');
 }
 
-function toggleLesson(card) {
-  const body = card.querySelector('.lesson-body');
-  const chev = card.querySelector('.chev');
-  const isOpen = body.classList.contains('open');
-  document.querySelectorAll('.lesson-body.open').forEach(b => { b.classList.remove('open'); b.closest('.lesson-card').querySelector('.chev').classList.remove('open'); });
-  if (!isOpen) { body.classList.add('open'); chev.classList.add('open'); }
+function toggleLesson(card){
+  const body=card.querySelector('.lesson-body');
+  const chev=card.querySelector('.chev');
+  const isOpen=body.classList.contains('open');
+  document.querySelectorAll('.lesson-body.open').forEach(b=>{b.classList.remove('open');b.closest('.lesson-card').querySelector('.chev').classList.remove('open');});
+  if(!isOpen){body.classList.add('open');chev.classList.add('open');}
 }
 
 // ═══════════════ SLEEP ═══════════════
-function logSleep() {
-  const start = document.getElementById('sleep-start').value;
-  const end = document.getElementById('sleep-end').value;
-  if (!start || !end) { toast('Set both times', 'error'); return; }
-  let s = new Date('1970-01-01T'+start+':00');
-  let e = new Date('1970-01-01T'+end+':00');
-  if (e <= s) e = new Date('1970-01-02T'+end+':00');
-  const hrs = ((e-s)/3600000).toFixed(1);
-  D.logs.sleep.push({ date: new Date().toDateString(), type:'night', start, end, hrs });
-  save(); renderSleepHistory(); calcRecovery(); toast('Sleep saved!');
+function logSleep(){
+  const start=document.getElementById('sleep-start').value;
+  const end=document.getElementById('sleep-end').value;
+  if(!start||!end){toast('Set both times','error');return;}
+  let s=new Date('1970-01-01T'+start+':00');
+  let e=new Date('1970-01-01T'+end+':00');
+  if(e<=s)e=new Date('1970-01-02T'+end+':00');
+  const hrs=((e-s)/3600000).toFixed(1);
+  D.logs.sleep.push({date:new Date().toDateString(),type:'night',start,end,hrs});
+  save();renderSleepHistory();calcRecovery();toast('Sleep saved!');
 }
 
-function logNap() {
-  const dur = document.getElementById('nap-dur').value;
-  const time = document.getElementById('nap-time').value;
-  if (!dur) { toast('Enter nap duration', 'error'); return; }
-  D.logs.sleep.push({ date: new Date().toDateString(), type:'nap', dur, time });
-  save(); renderSleepHistory(); toast('Nap logged!');
+function logNap(){
+  const dur=document.getElementById('nap-dur').value;
+  const time=document.getElementById('nap-time').value;
+  if(!dur){toast('Enter nap duration','error');return;}
+  D.logs.sleep.push({date:new Date().toDateString(),type:'nap',dur,time});
+  save();renderSleepHistory();toast('Nap logged!');
 }
 
-function renderSleepHistory() {
-  const el = document.getElementById('sleep-history');
-  const recent = D.logs.sleep.slice(-10).reverse();
-  if (!recent.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No sleep logs yet</div></div>'; return; }
-  el.innerHTML = recent.map(s => {
-    if (s.type === 'night') {
-      const hrs = parseFloat(s.hrs);
-      const color = hrs >= 8 ? 'var(--green)' : hrs >= 7 ? 'var(--amber)' : 'var(--red)';
-      return `<div class="sleep-history-item">
+function renderSleepHistory(){
+  const el=document.getElementById('sleep-history');
+  const recent=D.logs.sleep.slice(-10).reverse();
+  if(!recent.length){el.innerHTML='<div class="empty-state"><div class="empty-text">No sleep logs yet</div></div>';return;}
+  el.innerHTML=recent.map(s=>{
+    if(s.type==='night'){
+      const hrs=parseFloat(s.hrs);
+      const color=hrs>=8?'var(--green)':hrs>=7?'var(--amber)':'var(--red)';
+      return`<div class="sleep-history-item">
         <div class="sleep-hrs-big" style="color:${color}">${s.hrs}h</div>
-        <div class="sleep-detail">
-          <div class="sleep-type-label">Night Sleep</div>
-          <div class="sleep-time-range">${s.start} → ${s.end}</div>
-        </div>
+        <div class="sleep-detail"><div class="sleep-type-label">Night Sleep</div><div class="sleep-time-range">${s.start} → ${s.end}</div></div>
         <div class="sleep-date-badge">${s.date}</div>
       </div>`;
-    } else {
-      return `<div class="sleep-history-item">
+    }else{
+      return`<div class="sleep-history-item">
         <div class="sleep-hrs-big" style="color:var(--cyan)">${s.dur}m</div>
-        <div class="sleep-detail">
-          <div class="sleep-type-label">Afternoon Nap</div>
-          <div class="sleep-time-range">at ${s.time}</div>
-        </div>
+        <div class="sleep-detail"><div class="sleep-type-label">Afternoon Nap</div><div class="sleep-time-range">at ${s.time}</div></div>
         <div class="sleep-date-badge">${s.date}</div>
       </div>`;
     }
   }).join('');
 }
 
-function calcRecovery() {
-  const nights = D.logs.sleep.filter(s => s.type === 'night');
-  const last = nights[nights.length-1];
-  const sn = document.getElementById('rscore-num');
-  const sm = document.getElementById('rscore-msg');
-  const sp = document.getElementById('rscore-pills');
-  if (!last) { sn.textContent='--'; sm.textContent='Log sleep to calculate recovery'; sp.innerHTML=''; return; }
-  const hrs = parseFloat(last.hrs);
-  let score, color, msg, pills=[];
-  if (hrs>=8.5){score=98;color='var(--green)';msg='Elite recovery. Train at full intensity. You\'re in the zone.';pills=['pill-green|Peak Performance','pill-green|Go Hard Today'];}
-  else if (hrs>=7.5){score=87;color='var(--green)';msg='Good recovery. Full training recommended. Listen to your body.';pills=['pill-green|Ready to Train','pill-amber|Monitor Energy'];}
-  else if (hrs>=7){score=74;color='var(--amber)';msg='Adequate sleep. Train at moderate intensity. Watch for fatigue.';pills=['pill-amber|Moderate Intensity','pill-amber|Skip HIIT Today'];}
-  else if (hrs>=6){score=55;color='var(--amber)';msg='Below optimal. Reduce high-intensity work. Focus on technique.';pills=['pill-red|Reduce Intensity','pill-amber|Technique Focus'];}
-  else{score=32;color='var(--red)';msg='Poor recovery. Light technique work only. Prioritize sleep tonight.';pills=['pill-red|Light Training Only','pill-red|Sleep Early Tonight'];}
-  sn.textContent=score; sn.style.color=color; sm.textContent=msg;
+function calcRecovery(){
+  const nights=D.logs.sleep.filter(s=>s.type==='night');
+  const last=nights[nights.length-1];
+  const sn=document.getElementById('rscore-num');
+  const sm=document.getElementById('rscore-msg');
+  const sp=document.getElementById('rscore-pills');
+  if(!last){sn.textContent='--';sm.textContent='Log sleep to calculate recovery';sp.innerHTML='';return;}
+  const hrs=parseFloat(last.hrs);
+  let score,color,msg,pills=[];
+  if(hrs>=8.5){score=98;color='var(--green)';msg='Elite recovery. Train at full intensity.';pills=['pill-green|Peak Performance','pill-green|Go Hard Today'];}
+  else if(hrs>=7.5){score=87;color='var(--green)';msg='Good recovery. Full training recommended.';pills=['pill-green|Ready to Train','pill-amber|Monitor Energy'];}
+  else if(hrs>=7){score=74;color='var(--amber)';msg='Adequate sleep. Train at moderate intensity.';pills=['pill-amber|Moderate Intensity','pill-amber|Skip HIIT Today'];}
+  else if(hrs>=6){score=55;color='var(--amber)';msg='Below optimal. Reduce high-intensity work.';pills=['pill-red|Reduce Intensity','pill-amber|Technique Focus'];}
+  else{score=32;color='var(--red)';msg='Poor recovery. Light technique work only.';pills=['pill-red|Light Training Only','pill-red|Sleep Early Tonight'];}
+  sn.textContent=score;sn.style.color=color;sm.textContent=msg;
   sp.innerHTML=pills.map(p=>`<span class="pill ${p.split('|')[0]}">${p.split('|')[1]}</span>`).join('');
 }
 
@@ -1946,18 +2532,18 @@ let timerInt=null;
 let TS={workSec:180,restSec:60,roundsTotal:3,currentRound:1,timeLeft:180,isWork:true,isRunning:false};
 
 function applyPreset(work,rest,rounds){
-  TS.workSec=work*60; TS.restSec=rest*60; TS.roundsTotal=rounds;
+  TS.workSec=work*60;TS.restSec=rest*60;TS.roundsTotal=rounds;
   document.getElementById('t-work').value=work;
   document.getElementById('t-rest').value=rest;
   document.getElementById('t-rounds').value=rounds;
-  resetTimer(); toast(`Preset: ${work}min work · ${rest}min rest · ${rounds} rounds`);
+  resetTimer();toast(`Preset: ${work}min work · ${rest}min rest · ${rounds} rounds`);
 }
 
 function applyCustomTimer(){
   TS.workSec=parseFloat(document.getElementById('t-work').value||3)*60;
   TS.restSec=parseFloat(document.getElementById('t-rest').value||1)*60;
   TS.roundsTotal=parseInt(document.getElementById('t-rounds').value||3);
-  resetTimer(); toast('Timer applied');
+  resetTimer();toast('Timer applied');
 }
 
 function fmtTime(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
@@ -1981,7 +2567,7 @@ function startTimer(){
   TS.isRunning=true;
   document.getElementById('btn-start').style.display='none';
   document.getElementById('btn-pause').style.display='block';
-  if(D.wakelockEnabled&&'wakeLock' in navigator) navigator.wakeLock.request('screen').catch(()=>{});
+  if(D.wakelockEnabled&&'wakeLock' in navigator)navigator.wakeLock.request('screen').catch(()=>{});
   timerInt=setInterval(()=>{
     TS.timeLeft--;
     if(TS.timeLeft<0){
@@ -1995,9 +2581,7 @@ function startTimer(){
           toast('🏆 Workout complete!');beep(800,0.5);return;
         }
         TS.isWork=false;TS.timeLeft=TS.restSec;beep(440,0.3);
-      } else {
-        TS.isWork=true;TS.currentRound++;TS.timeLeft=TS.workSec;beep(880,0.3);
-      }
+      }else{TS.isWork=true;TS.currentRound++;TS.timeLeft=TS.workSec;beep(880,0.3);}
     }
     updateTimerUI();
   },1000);
@@ -2032,66 +2616,54 @@ function beep(freq,dur){
 }
 
 // ═══════════════ ANALYTICS ═══════════════
-function openStatsModal() {
-  const overlay = document.getElementById('stats-modal-overlay');
-  const content = document.getElementById('stats-modal-content');
-  content.innerHTML = buildStatsHTML();
+function openStatsModal(){
+  const overlay=document.getElementById('stats-modal-overlay');
+  const content=document.getElementById('stats-modal-content');
+  content.innerHTML=buildStatsHTML();
   overlay.classList.add('open');
   document.getElementById('stats-fab').style.display='none';
 }
 
-document.addEventListener('click', e => {
-  const overlay = document.getElementById('stats-modal-overlay');
-  if (e.target === overlay) {
-    overlay.classList.remove('open');
-    document.getElementById('stats-fab').style.display='flex';
-  }
+document.addEventListener('click',e=>{
+  const overlay=document.getElementById('stats-modal-overlay');
+  if(e.target===overlay){overlay.classList.remove('open');document.getElementById('stats-fab').style.display='flex';}
 });
 
-function buildStatsHTML() {
-  const total = D.logs.strength.length + D.logs.grip.length + D.logs.cali.length + D.logs.karate.length;
-  const nights = D.logs.sleep.filter(s=>s.type==='night');
-  const avg = nights.length ? (nights.reduce((a,s)=>a+parseFloat(s.hrs),0)/nights.length).toFixed(1) : 0;
-  const DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const mondayOffset = dayOfWeek===0?-6:1-dayOfWeek;
-  const chartBars = DAYS.map((d,i)=>{
-    const date = new Date(now);
-    date.setDate(now.getDate()+mondayOffset+i);
-    const dStr = date.toDateString();
-    const isToday = dStr===now.toDateString();
-    const td = D.trainingDays[dStr];
-    const isTodayDone = isToday && D.routine.every(r=>r.done);
-    const hasData = td || isTodayDone;
-    const h = td ? Math.round((td.done/td.total)*100) : (isTodayDone?100:10);
-    return `<div class="bar-wrap" style="height:100%">
+function buildStatsHTML(){
+  const total=D.logs.strength.length+D.logs.grip.length+D.logs.cali.length+D.logs.karate.length;
+  const nights=D.logs.sleep.filter(s=>s.type==='night');
+  const avg=nights.length?(nights.reduce((a,s)=>a+parseFloat(s.hrs),0)/nights.length).toFixed(1):0;
+  const DAYS=['Mo','Tu','We','Th','Fr','Sa','Su'];
+  const now=new Date();
+  const dayOfWeek=now.getDay();
+  const mondayOffset=dayOfWeek===0?-6:1-dayOfWeek;
+  const chartBars=DAYS.map((d,i)=>{
+    const date=new Date(now);date.setDate(now.getDate()+mondayOffset+i);
+    const dStr=date.toDateString();const isToday=dStr===now.toDateString();
+    const td=D.trainingDays[dStr];const isTodayDone=isToday&&D.routine.every(r=>r.done);
+    const hasData=td||isTodayDone;
+    const h=td?Math.round((td.done/td.total)*100):(isTodayDone?100:10);
+    return`<div class="bar-wrap" style="height:100%">
       <div class="bar-inner${isToday?' today':''}${hasData?' has-data':''}" style="height:${h}%;"></div>
       <div class="bar-day-lbl">${d}</div>
     </div>`;
   }).join('');
-
-  const achievementsHTML = ACHIEVEMENTS.map(a => {
-    const unlocked = a.unlock(D);
-    return `<div class="ach-card${unlocked?' unlocked':''}">
+  const achievementsHTML=ACHIEVEMENTS.map(a=>{
+    const unlocked=a.unlock(D);
+    return`<div class="ach-card${unlocked?' unlocked':''}">
       <div class="ach-icon ${unlocked?'unlocked':'locked'}">${a.icon}</div>
-      <div>
-        <div class="ach-name">${a.name}</div>
-        <div class="ach-desc">${a.desc}</div>
-        ${unlocked?'<span class="pill pill-green" style="margin-top:5px">Unlocked ✓</span>':'<span class="pill pill-dim" style="margin-top:5px">Locked</span>'}
-      </div>
+      <div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div>
+      ${unlocked?'<span class="pill pill-green" style="margin-top:5px">Unlocked ✓</span>':'<span class="pill pill-dim" style="margin-top:5px">Locked</span>'}</div>
     </div>`;
   }).join('');
-
-  const currentBeltIdx = BELTS.findIndex(b=>b.name===D.belt);
-  const beltHTML = BELTS.map((b,i)=>`<div class="belt-row">
+  const currentBeltIdx=BELTS.findIndex(b=>b.name===D.belt);
+  const beltHTML=BELTS.map((b,i)=>`<div class="belt-row">
     <div class="belt-swatch" style="background:${b.color};${b.name==='White'?'border:1px solid var(--border)':''}"></div>
     <div class="belt-name" style="${i===currentBeltIdx?'color:var(--red)':''}">${b.name} Belt</div>
     <div class="belt-exp">${b.exp}</div>
     <div class="belt-status">${i<currentBeltIdx?'✅':i===currentBeltIdx?'⭐':''}</div>
   </div>`).join('');
-
-  return `
+  return`
     <div style="font-family:var(--font-d);font-size:32px;font-weight:900;letter-spacing:2px;margin-bottom:16px">PROGRESS <span style="color:var(--red)">STATS</span></div>
     <div class="streak-hero" style="padding:12px 0">
       <div class="streak-fire" style="font-size:48px">🔥</div>
@@ -2101,133 +2673,101 @@ function buildStatsHTML() {
         <div class="streak-sub">Best: ${D.bestStreak||D.streak} days</div>
       </div>
     </div>
-    <div class="week-strip" id="modal-week-strip" style="margin-bottom:16px"></div>
     <div class="stats-grid3">
       <div class="stats-mini"><div class="stats-mini-val">${total}</div><div class="stats-mini-lbl">Sessions</div></div>
       <div class="stats-mini"><div class="stats-mini-val">${avg}h</div><div class="stats-mini-lbl">Avg Sleep</div></div>
       <div class="stats-mini"><div class="stats-mini-val">${D.logs.karate.length}</div><div class="stats-mini-lbl">Karate Days</div></div>
     </div>
-    <div class="card">
-      <div class="card-title">7-Day Consistency</div>
-      <div class="chart-bars" style="height:140px">${chartBars}</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Achievements</div>
-      ${achievementsHTML}
-    </div>
-    <div class="card">
-      <div class="card-title">Belt Journey</div>
-      ${beltHTML}
-    </div>
+    <div class="card"><div class="card-title">7-Day Consistency</div><div class="chart-bars" style="height:140px">${chartBars}</div></div>
+    <div class="card"><div class="card-title">Achievements</div>${achievementsHTML}</div>
+    <div class="card"><div class="card-title">Belt Journey</div>${beltHTML}</div>
     <div class="dbp-credit" style="padding:16px 0 0">© 2025 <span>DBP</span></div>`;
 }
 
 // ═══════════════ SETTINGS ═══════════════
-function saveTimingSettings() {
-  D.wakeTime = document.getElementById('set-wake').value;
-  D.quitTime = document.getElementById('set-quit').value;
-  D.bedTime = document.getElementById('set-sleep').value;
+function saveTimingSettings(){
+  D.wakeTime=document.getElementById('set-wake').value;
+  D.quitTime=document.getElementById('set-quit').value;
+  D.bedTime=document.getElementById('set-sleep').value;
   saveSettings();
-  toast('Timing saved! Quit alerts set for ' + D.quitTime);
+  toast('Timing saved! Quit alerts set for '+D.quitTime);
 }
 
-function saveSettings() {
-  D.wakeTime = document.getElementById('set-wake').value || D.wakeTime;
-  D.quitTime = document.getElementById('set-quit').value || D.quitTime;
-  D.bedTime = document.getElementById('set-sleep').value || D.bedTime;
-  D.belt = document.getElementById('set-belt').value;
-  D.style = document.getElementById('set-style').value;
-  D.soundEnabled = document.getElementById('set-sound').checked;
-  D.wakelockEnabled = document.getElementById('set-wakelock').checked;
-  D.qnotifyEnabled = document.getElementById('set-qnotify').checked;
-  save(); toast('Settings saved!');
+function saveSettings(){
+  D.wakeTime=document.getElementById('set-wake').value||D.wakeTime;
+  D.quitTime=document.getElementById('set-quit').value||D.quitTime;
+  D.bedTime=document.getElementById('set-sleep').value||D.bedTime;
+  D.belt=document.getElementById('set-belt').value;
+  D.style=document.getElementById('set-style').value;
+  D.soundEnabled=document.getElementById('set-sound').checked;
+  D.wakelockEnabled=document.getElementById('set-wakelock').checked;
+  D.qnotifyEnabled=document.getElementById('set-qnotify').checked;
+  save();toast('Settings saved!');
 }
 
-function loadSettings() {
-  try {
-    document.getElementById('set-wake').value = D.wakeTime;
-    document.getElementById('set-quit').value = D.quitTime;
-    document.getElementById('set-sleep').value = D.bedTime;
-    document.getElementById('set-belt').value = D.belt;
-    document.getElementById('set-style').value = D.style;
-    document.getElementById('set-sound').checked = D.soundEnabled !== false;
-    document.getElementById('set-wakelock').checked = D.wakelockEnabled !== false;
-    document.getElementById('set-qnotify').checked = D.qnotifyEnabled !== false;
-  } catch(e) {}
+function loadSettings(){
+  try{
+    document.getElementById('set-wake').value=D.wakeTime;
+    document.getElementById('set-quit').value=D.quitTime;
+    document.getElementById('set-sleep').value=D.bedTime;
+    document.getElementById('set-belt').value=D.belt;
+    document.getElementById('set-style').value=D.style;
+    document.getElementById('set-sound').checked=D.soundEnabled!==false;
+    document.getElementById('set-wakelock').checked=D.wakelockEnabled!==false;
+    document.getElementById('set-qnotify').checked=D.qnotifyEnabled!==false;
+  }catch(e){}
 }
 
-function factoryReset() {
-  if (!confirm('Delete ALL training data? Cannot be undone.')) return;
-  localStorage.removeItem(SK);
-  location.reload();
+function factoryReset(){
+  if(!confirm('Delete ALL training data? Cannot be undone.'))return;
+  localStorage.removeItem(SK);location.reload();
 }
 
 // ═══════════════ QUIT TIME ═══════════════
-let quitAlertShown = false;
+let quitAlertShown=false;
 
-function startQuitChecker() {
-  setInterval(checkQuitTime, 30000); // check every 30s
-  checkQuitTime();
-}
+function startQuitChecker(){setInterval(checkQuitTime,30000);checkQuitTime();}
 
-function checkQuitTime() {
-  if (!D.qnotifyEnabled || !D.quitTime) return;
-  const now = new Date();
-  const nowMin = now.getHours()*60 + now.getMinutes();
-  const [qh, qm] = D.quitTime.split(':').map(Number);
-  const quitMin = qh*60 + qm;
-  const diff = quitMin - nowMin;
-  const banner = document.getElementById('quit-banner');
-  // Show 5 min before, hide after quit time
-  if (diff > 0 && diff <= 5) {
-    if (!TS.isRunning) { // Don't interrupt timer
-      banner.classList.add('show');
-      document.getElementById('quit-time-remaining').textContent = diff + ' min';
-      if (!quitAlertShown) {
-        quitAlertShown = true;
-        beep(440, 0.5);
-      }
-    }
-  } else if (diff <= 0 && diff > -5) {
-    banner.querySelector('.quit-banner-text').innerHTML = '⚡ Quit Time Now!';
-    banner.querySelector('.quit-banner-sub').textContent = TS.isRunning ? 'Timer running — finish your round first.' : 'Time to wrap up training.';
+function checkQuitTime(){
+  if(!D.qnotifyEnabled||!D.quitTime)return;
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const [qh,qm]=D.quitTime.split(':').map(Number);
+  const quitMin=qh*60+qm;
+  const diff=quitMin-nowMin;
+  const banner=document.getElementById('quit-banner');
+  if(diff>0&&diff<=5){
+    if(!TS.isRunning){banner.classList.add('show');document.getElementById('quit-time-remaining').textContent=diff+' min';if(!quitAlertShown){quitAlertShown=true;beep(440,0.5);}}
+  }else if(diff<=0&&diff>-5){
+    banner.querySelector('.quit-banner-text').innerHTML='⚡ Quit Time Now!';
+    banner.querySelector('.quit-banner-sub').textContent=TS.isRunning?'Timer running — finish your round first.':'Time to wrap up training.';
     banner.classList.add('show');
-  } else {
-    banner.classList.remove('show');
-    quitAlertShown = false;
-  }
+  }else{banner.classList.remove('show');quitAlertShown=false;}
 }
 
-// ═══════════════ NOTIFY PANEL ═══════════════
-function toggleNotifyPanel() {
-  const btn = document.getElementById('notify-btn');
+function toggleNotifyPanel(){
+  const btn=document.getElementById('notify-btn');
   btn.classList.toggle('active');
-  if (btn.classList.contains('active')) {
-    toast(`Quit alert set for ${D.quitTime} · Wake: ${D.wakeTime}`, 'info');
-  }
+  if(btn.classList.contains('active'))toast(`Quit alert set for ${D.quitTime} · Wake: ${D.wakeTime}`,'info');
 }
 
 // ═══════════════ TOAST ═══════════════
-function toast(msg, type='') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast' + (type?' '+type:'') + ' show';
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast'+(type?' '+type:'')+' show';
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 2800);
+  el._t=setTimeout(()=>el.classList.remove('show'),2800);
 }
 
-// Stats FAB stays visible
-window.addEventListener('scroll', () => {}, {passive:true});
-
 // ═══════════════ SERVICE WORKER ═══════════════
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
 
-// ═══════════════ BOOT ═══════════════
-window.onload = init;
+window.onload=init;
 </script>
 </body>
 </html>
